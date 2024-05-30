@@ -89,12 +89,18 @@ services:
     image: elasticsearch:8.8.0
     ports:
       - 9200:9200
-      - 9300:9300
     
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - m=1GB  
+    deploy:
+      resources:
+        limits:
+          memory: 1GB
+    depends_on:
+      spark:
+        condition: service_started
+
     
 volumes:
   data_volume:
