@@ -10,12 +10,10 @@ from elasticsearch import Elasticsearch
 
 import hashlib
 def generate_sha256_hash_from_text(text) -> str:
-    # Create a SHA256 hash object
     sha256_hash = hashlib.sha256()
-    # Update the hash object with the text encoded to bytes
     sha256_hash.update(text.encode('utf-8'))
-    # Return the hexadecimal representation of the hash
     return sha256_hash.hexdigest()
+
 spark = SparkSession.builder.appName("kafkatospark").getOrCreate()
 spark.sparkContext.setLogLevel("ERROR")
 kafkaServer="broker:9092"
@@ -84,11 +82,14 @@ df = spark.readStream.format('kafka') \
         
 def process_batch(batch_df, batch_id):
     for row in batch_df.collect():
-        document = row['content']  
+        document = row['content'] 
+        if document is None:
+            print("non cè ninete")
+            return
         hash = generate_sha256_hash_from_text(document)
         try:
             
-            resp = es.index(index=es_index, id=hash, document=document)
+            resp = es.index(index=es_index, id=hash, body={"content":document})
             print(resp)
         except Exception as e:
             print(f"\rErrore nell'invio del documento a Elastic: {e}",end = "")
