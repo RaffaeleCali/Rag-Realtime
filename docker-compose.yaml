@@ -89,7 +89,9 @@ services:
     image: elasticsearch:8.8.0
     ports:
       - 9200:9200
-    
+      - "9300:9300"
+    volumes:
+      - ./data_elastic:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false

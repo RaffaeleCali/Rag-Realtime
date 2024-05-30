@@ -87,6 +87,10 @@ def process_batch(batch_df, batch_id):
             print("non cè ninete")
             return
         hash = generate_sha256_hash_from_text(document)
+        esiste = es.exists(index=es_index, id=hash)
+        if esiste == True:
+            return
+        
         try:
             
             resp = es.index(index=es_index, id=hash, body={"content":document})
