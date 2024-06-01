@@ -99,6 +99,20 @@ services:
     depends_on:
       elasticsearch:
         condition: service_started
+  
+  ollama_interface:
+    build:
+      context: .  # Imposta il contesto di costruzione al livello superiore
+      dockerfile: ragui/Dockerfile
+    ports:
+      - "8501:8501"
+    depends_on:
+      - elasticsearch
+      - ollamaim
+    environment:
+      - ES_HOST=http://elasticsearch:9200
+      - ES_INDEX=spark-index
+
 volumes:
   data_volume:
     driver: local
