@@ -1,20 +1,19 @@
 FROM apache/spark:3.4.2
 
 USER 0
-RUN pip3 install pyspark numpy  elasticsearch
+RUN pip3 install numpy  elasticsearch
 
-WORKDIR /app
-
-
-RUN pip install chromadb langchain langchain_community langchain_chroma
+RUN pip3 install langchain langchain_community 
 
 
-RUN pip install einops nomic numpy
-RUN pip install chromadb 
-RUN pip install langchain_chroma
-RUN pip install sentence_transformers
-RUN pip3 install chromadb
+RUN pip3 install einops nomic numpy
+#RUN pip install chromadb 
+#RUN pip install langchain_chroma
+#RUN pip install sentence_transformers
+#RUN pip3 install chromadb
 RUN pip3 install  langchain_elasticsearch
-RUN pip install langchain_nomic
-COPY ./code .
+RUN pip3 install sentence_transformers
+RUN mkdir -p /home/spark && chmod -R 777 /home/spark
+COPY ./streaming/code /opt/spark/work-dir
+WORKDIR /opt/spark/work-dir
 USER spark

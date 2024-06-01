@@ -5,14 +5,14 @@ from pyspark.sql import types as st
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StructField, StringType
 import sys 
-from elasticsearch import Elasticsearch
-from sentence_transformers import SentenceTransformer
+
 import hashlib
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from elasticsearch.helpers import bulk
 from langchain_elasticsearch import ElasticsearchStore
 import elasticsearch
 from langchain_community.embeddings import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
+from elasticsearch import Elasticsearch
 
 def generate_sha256_hash_from_text(text) -> str:
     sha256_hash = hashlib.sha256()
@@ -48,18 +48,19 @@ def process_batch(batch_df, batch_id):
         for split in splits:
             hash = generate_sha256_hash_from_text(split)
             # Controlla l'esistenza di ciascun hash/documento
-            #if not es.exists(index=es_index, id=hash):
-            try:
-                ids = [hash]
-                texts = [split]
-                resp = es.add_texts(index=es_index, ids=ids,texts=texts )
-                print(resp)
-            except Exception as e:
-                print(f"\rErrore nell'invio del documento a Elastic: {e}",end = "")
-
-#            else: 
-#                print("gia presente")
-
+            #prova texts_exists(es, es_index, hash)
+            prova = es_cli.exists(index=es_index, id=hash)
+            print(prova)
+            if not prova:
+                try:
+                    ids = [hash]
+                    texts = [split]
+                    resp = es.add_texts(index=es_index, ids=ids, texts=texts)
+                    print(resp)
+                except Exception as e:
+                    print(f"\rErrore nell'invio del documento a Elastic: {e}", end="")
+            else:
+                print("Documento già presente")
 
 
 #model = SentenceTransformer("nomic-ai/nomic-embed-text-v1", trust_remote_code=True)
@@ -69,7 +70,7 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20
 #embedding_function = CustomEmbeddingFunction(model)
 
 #model = SentenceTransformer("all-MiniLM-L6-v2")
-
+es_cli = Elasticsearch("http://elasticsearch:9200")
 spark = SparkSession.builder.appName("kafkatospark").getOrCreate()
 
 kafkaServer="broker:9092"
@@ -82,16 +83,21 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20
 spark.sparkContext.setLogLevel("ERROR")
 #es_host = Elasticsearch(es_host="http://elasticsearch:9200",index_name= es_index)
 
+
+
 es = ElasticsearchStore(
     index_name= es_index,
     es_url="http://elasticsearch:9200",
     embedding= HuggingFaceEmbeddings(
         model_name="all-MiniLM-L6-v2", model_kwargs={"device": "cpu"}
     ),
+    #distance_strategy="COSINE",
 )
 
 
-
+#strategy=ElasticsearchStore.ApproxRetrievalStrategy(
+#        hybrid=True,
+#    )
 
 # Creazione dell'istanza della classe di funzione di embedding
 
@@ -117,6 +123,8 @@ schema = StructType([
     StructField("status", StringType(), True),
     StructField("totalResults", StringType(), True)
     ])
+
+
 
 df = spark.readStream.format('kafka') \
         .option('kafka.bootstrap.servers', kafkaServer) \
