@@ -5,3 +5,4 @@ langchain_core
 sentence_transformers
 elasticsearch
 python-dotenv
+langchain_openai

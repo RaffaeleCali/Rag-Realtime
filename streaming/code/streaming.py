@@ -20,22 +20,6 @@ def generate_sha256_hash_from_text(text) -> str:
     return sha256_hash.hexdigest()
 
 
-class CustomEmbeddingFunction:
-    def __init__(self,model ):
-        self.model = model
-
-    def __call__(self, input):
-        if isinstance(input, list):
-            return [self.generate_embeddings(text) for text in input]
-        else:
-            return [self.generate_embeddings(input)]
-
-    def generate_embeddings(self, text):
-        if text:
-            embeddings = self.model.encode([text], convert_to_tensor=False)
-            return embeddings.tolist()[0]
-        else:
-            return []
 
 def process_batch(batch_df, batch_id):
     for row in batch_df.collect():
@@ -70,7 +54,6 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20
 #embedding_function = CustomEmbeddingFunction(model)
 
 #model = SentenceTransformer("all-MiniLM-L6-v2")
-es_cli = Elasticsearch("http://elasticsearch:9200")
 spark = SparkSession.builder.appName("kafkatospark").getOrCreate()
 
 kafkaServer="broker:9092"
@@ -84,6 +67,7 @@ spark.sparkContext.setLogLevel("ERROR")
 #es_host = Elasticsearch(es_host="http://elasticsearch:9200",index_name= es_index)
 
 
+es_cli = Elasticsearch("http://elasticsearch:9200")
 
 es = ElasticsearchStore(
     index_name= es_index,
