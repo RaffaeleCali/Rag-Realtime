@@ -3,7 +3,6 @@ from pyspark.sql import SparkSession
 from pyspark.streaming import StreamingContext
 from pyspark.sql import types as st
 from pyspark.sql.functions import from_json, col
-from pyspark.sql.functions import create_map, lit
 from pyspark.sql.types import StructType, StructField, StringType
 import sys 
 from elasticsearch import Elasticsearch
@@ -13,9 +12,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from elasticsearch.helpers import bulk
 from langchain_elasticsearch import ElasticsearchStore
 import elasticsearch
-from langchain_nomic import NomicEmbeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from elasticsearch import Elasticsearch
 
 def generate_sha256_hash_from_text(text) -> str:
     sha256_hash = hashlib.sha256()
@@ -51,17 +48,17 @@ def process_batch(batch_df, batch_id):
         for split in splits:
             hash = generate_sha256_hash_from_text(split)
             # Controlla l'esistenza di ciascun hash/documento
-            if not es.exists(index=es_index, id=hash):
-                try:
-                    ids = [hash]
-                    texts = [split]
-                    resp = es.add_texts(index=es_index, ids=ids,texts=texts )
-                    print(resp)
-                except Exception as e:
-                    print(f"\rErrore nell'invio del documento a Elastic: {e}",end = "")
+            #if not es.exists(index=es_index, id=hash):
+            try:
+                ids = [hash]
+                texts = [split]
+                resp = es.add_texts(index=es_index, ids=ids,texts=texts )
+                print(resp)
+            except Exception as e:
+                print(f"\rErrore nell'invio del documento a Elastic: {e}",end = "")
 
-            else: 
-                print("gia presente")
+#            else: 
+#                print("gia presente")
 
 
 
@@ -71,7 +68,7 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20
 
 #embedding_function = CustomEmbeddingFunction(model)
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+#model = SentenceTransformer("all-MiniLM-L6-v2")
 
 spark = SparkSession.builder.appName("kafkatospark").getOrCreate()
 
@@ -80,14 +77,14 @@ topic = "datapipe"
             
 
 es_index = "spark-index"
-embedding_function = CustomEmbeddingFunction(model)
+#embedding_function = CustomEmbeddingFunction(model)
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-
+spark.sparkContext.setLogLevel("ERROR")
 #es_host = Elasticsearch(es_host="http://elasticsearch:9200",index_name= es_index)
 
 es = ElasticsearchStore(
     index_name= es_index,
-    es_url="http://localhost:9200",
+    es_url="http://elasticsearch:9200",
     embedding= HuggingFaceEmbeddings(
         model_name="all-MiniLM-L6-v2", model_kwargs={"device": "cpu"}
     ),

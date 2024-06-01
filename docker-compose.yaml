@@ -43,13 +43,9 @@ services:
       context: streaming
     container_name: spark-streaming
     depends_on:
-      zookeeper:
-        condition: service_started 
-      broker:
-        condition: service_started
-      logstash:
-        condition: service_started
-      
+      - topics
+      - elasticsearch
+        
     volumes:
       - data_volume:/datap
 
@@ -103,8 +99,8 @@ services:
         limits:
           memory: 1GB
     depends_on:
-      spark:
-        condition: service_started
+      - topics
+        
   kibana:
     image: docker.elastic.co/kibana/kibana:8.8.0
     container_name: kibana
