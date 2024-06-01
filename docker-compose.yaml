@@ -85,15 +85,18 @@ services:
     environment:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_HOST=0.0.0.0
-  elasticsearch:
+  elasticsearch:   
+    container_name: elasticsearch 
     image: elasticsearch:8.8.0
     ports:
       - 9200:9200
-      - "9300:9300"
     volumes:
       - ./data_elastic:/usr/share/elasticsearch/data
     environment:
+      - node.name=elasticsearch
       - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - xpack.security.enabled=false
     deploy:
       resources:
@@ -102,8 +105,16 @@ services:
     depends_on:
       spark:
         condition: service_started
-
-    
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      elasticsearch:
+        condition: service_started
 volumes:
   data_volume:
     driver: local
