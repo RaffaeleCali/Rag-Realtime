@@ -1,5 +1,6 @@
-FROM jupyter/pyspark-notebook:spark-3.1.1
+FROM apache/spark:3.4.2
 
+USER 0
 RUN pip3 install pyspark numpy  elasticsearch
 
 WORKDIR /app
@@ -13,6 +14,7 @@ RUN pip install chromadb
 RUN pip install langchain_chroma
 RUN pip install sentence_transformers
 RUN pip3 install chromadb
+RUN pip3 install  langchain_elasticsearch
+RUN pip install langchain_nomic
 COPY ./code .
-
-ENTRYPOINT ["spark-submit", "--packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1","--master", "local[*]", "streaming.py"]
+USER spark
