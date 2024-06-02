@@ -52,12 +52,12 @@ services:
       topics:
         condition: service_completed_successfully
  
-  ollamaim:
+  ollama:
     build:
       context: .  # Imposta il contesto di costruzione al livello superiore
       dockerfile: ollamaprova/Dockerfile
     ports:
-      - 7869:11434
+      - 7689:11434
     volumes:
       - .:/code
       - ./ollama/ollama:/root/.ollama
@@ -108,7 +108,7 @@ services:
       - "8501:8501"
     depends_on:
       - elasticsearch
-      - ollamaim
+      - ollama
     environment:
       - ES_HOST=http://elasticsearch:9200
       - ES_INDEX=spark-index
