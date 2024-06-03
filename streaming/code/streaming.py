@@ -1,17 +1,10 @@
-
 from pyspark.sql import SparkSession
-from pyspark.streaming import StreamingContext
-from pyspark.sql import types as st
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StructField, StringType
-import sys 
-
 import hashlib
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_elasticsearch import ElasticsearchStore
-import elasticsearch
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from sentence_transformers import SentenceTransformer
 from elasticsearch import Elasticsearch
 
 def generate_sha256_hash_from_text(text) -> str:
@@ -19,116 +12,89 @@ def generate_sha256_hash_from_text(text) -> str:
     sha256_hash.update(text.encode('utf-8'))
     return sha256_hash.hexdigest()
 
-
-
 def process_batch(batch_df, batch_id):
     for row in batch_df.collect():
-        document = row['content'] 
+        document = row['content']
         if document is None:
-            print("non cè ninete")
-            return
+            print("non c'è niente")
+            continue
         splits = text_splitter.split_text(document)
         
         for split in splits:
             hash = generate_sha256_hash_from_text(split)
-            # Controlla l'esistenza di ciascun hash/documento
-            #prova texts_exists(es, es_index, hash)
             prova = es_cli.exists(index=es_index, id=hash)
-            print(prova)
             if not prova:
                 try:
                     ids = [hash]
                     texts = [split]
                     resp = es.add_texts(index=es_index, ids=ids, texts=texts)
-                    print(resp)
+                    print(f"Document added with id: {hash}")
                 except Exception as e:
-                    print(f"\rErrore nell'invio del documento a Elastic: {e}", end="")
+                    print(f"Errore nell'invio del documento a Elastic: {e}")
             else:
                 print("Documento già presente")
 
-
-#model = SentenceTransformer("nomic-ai/nomic-embed-text-v1", trust_remote_code=True)
-
+# Initialize text splitter
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 
-#embedding_function = CustomEmbeddingFunction(model)
-
-#model = SentenceTransformer("all-MiniLM-L6-v2")
+# Initialize Spark session
 spark = SparkSession.builder.appName("kafkatospark").getOrCreate()
 
-kafkaServer="broker:9092"
+kafkaServer = "broker:9092"
 topic = "datapipe"
-            
 
 es_index = "spark-index"
-#embedding_function = CustomEmbeddingFunction(model)
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-spark.sparkContext.setLogLevel("ERROR")
-#es_host = Elasticsearch(es_host="http://elasticsearch:9200",index_name= es_index)
-
-
 es_cli = Elasticsearch("http://elasticsearch:9200")
 
 es = ElasticsearchStore(
-    index_name= es_index,
+    index_name=es_index,
     es_url="http://elasticsearch:9200",
-    embedding= HuggingFaceEmbeddings(
+    embedding=HuggingFaceEmbeddings(
         model_name="all-MiniLM-L6-v2", model_kwargs={"device": "cpu"}
     ),
-    #distance_strategy="COSINE",
 )
 
-
-#strategy=ElasticsearchStore.ApproxRetrievalStrategy(
-#        hybrid=True,
-#    )
-
-# Creazione dell'istanza della classe di funzione di embedding
-
+# Define the schema for the articles
 article_schema = StructType([
-        StructField("url", StringType(), True),
-        StructField("publishedAt", StringType(), True),
-        StructField("description", StringType(), True),
-        StructField("source", StructType([
-            StructField("name", StringType(), True),
-            StructField("id", StringType(), True)
-        ]), True),
-        StructField("title", StringType(), True),
-        StructField("urlToImage", StringType(), True),
-        StructField("content", StringType(), True),
-        StructField("author", StringType(), True)
-    ])
+    StructField("url", StringType(), True),
+    StructField("publishedAt", StringType(), True),
+    StructField("description", StringType(), True),
+    StructField("source", StructType([
+        StructField("name", StringType(), True),
+        StructField("id", StringType(), True)
+    ]), True),
+    StructField("title", StringType(), True),
+    StructField("urlToImage", StringType(), True),
+    StructField("content", StringType(), True),
+    StructField("author", StringType(), True)
+])
 
-    # Definisci lo schema per l'intero JSON
+# Define the schema for the entire JSON
 schema = StructType([
     StructField("@timestamp", StringType(), True),
     StructField("articles", article_schema, True),
     StructField("@version", StringType(), True),
     StructField("status", StringType(), True),
     StructField("totalResults", StringType(), True)
-    ])
+])
 
-
-
+# Read data from Kafka
 df = spark.readStream.format('kafka') \
-        .option('kafka.bootstrap.servers', kafkaServer) \
-        .option('subscribe', topic) \
-        .option("startingOffsets", "latest") \
-        .load() \
-        .select(from_json(col("value").cast("string"), schema).alias("data")) \
-        .selectExpr("data.articles.content")
-#.select(from_json(df.json, schema).alias('rowdata')) \
-        
+    .option('kafka.bootstrap.servers', kafkaServer) \
+    .option('subscribe', topic) \
+    .option("startingOffsets", "latest") \
+    .load() \
+    .selectExpr("CAST(value AS STRING) as json") \
+    .select(from_json(col("json"), schema).alias("data")) \
+    .select("data.articles.content")
 
-
-
+# Add logging to check the content being processed
+df.writeStream \
+    .foreachBatch(lambda df, epoch_id: df.show(truncate=False)) \
+    .start() \
+    .awaitTermination()
 
 df.writeStream \
     .foreachBatch(process_batch) \
     .start() \
     .awaitTermination()
-
-#df.writeStream \
-#.format("console") \
-#.start() \
-#.awaitTermination()
