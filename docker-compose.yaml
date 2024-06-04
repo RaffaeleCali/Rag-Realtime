@@ -1,5 +1,11 @@
 version: '3.8'
 services:
+  flask_server:
+    image: server_data
+    build:
+      context: ./server_data
+    ports:
+      - "5000:5000"
   logstash:
     image: docker.elastic.co/logstash/logstash:8.13.2
     volumes:
