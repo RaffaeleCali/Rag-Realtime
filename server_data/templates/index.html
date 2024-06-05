@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Carica Testo</title>
+</head>
+<body>
+    <h1>Carica un Testo</h1>
+    <form action="/upload" method="post">
+        <label for="title">Titolo:</label>
+        <input type="text" id="title" name="title" required><br><br>
+        <label for="author">Autore:</label>
+        <input type="text" id="author" name="author" required><br><br>
+        <label for="content">Contenuto:</label><br>
+        <textarea id="content" name="content" rows="10" cols="50" required></textarea><br><br>
+        <input type="submit" value="Invia">
+    </form>
+</body>
+</html>

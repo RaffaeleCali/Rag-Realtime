@@ -1,10 +1,15 @@
 import requests
 import xml.etree.ElementTree as ET
 import random
-from flask import Flask, jsonify
+import socket
+import json
+from flask import Flask, request, render_template, jsonify
 from datetime import datetime
 
 app = Flask(__name__)
+
+LOGSTASH_HOST = 'logstash'
+LOGSTASH_PORT = 5044
 
 # Lista di termini di ricerca casuali
 search_terms = [
@@ -45,6 +50,39 @@ def get_arxiv_articles():
         articles.append(article)
     return articles
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    title = request.form['title']
+    author = request.form['author']
+    content = request.form['content']
+    
+    data = {
+        "@timestamp": datetime.now().isoformat(),
+        "articles": [{
+            "title": title,
+            "author": author,
+            "content": content,
+            "publishedAt": datetime.now().isoformat(),
+            "source": {
+                "name": "Manual Upload",
+                "id": None
+            },
+            "description": content[:150],
+            "url": None,
+            "urlToImage": None
+        }],
+        "@version": "1",
+        "status": "ok",
+        "totalResults": "1"
+    }
+    
+    send_to_logstash(data)
+    return jsonify({"status": "success", "data": data})
+
 @app.route('/fetch_articles', methods=['GET'])
 def fetch_articles():
     articles = get_arxiv_articles()
@@ -55,7 +93,14 @@ def fetch_articles():
         "status": "ok",
         "totalResults": str(len(articles))
     }
+    send_to_logstash(data)
     return jsonify(data)
+
+def send_to_logstash(data):
+    message = json.dumps(data) + '\n'
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.connect((LOGSTASH_HOST, LOGSTASH_PORT))
+        sock.sendall(message.encode('utf-8'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

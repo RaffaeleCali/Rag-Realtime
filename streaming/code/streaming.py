@@ -113,7 +113,7 @@ schema = StructType([
 df = spark.readStream.format('kafka') \
         .option('kafka.bootstrap.servers', kafkaServer) \
         .option('subscribe', topic) \
-        .option("startingOffsets", "latest") \
+        .option("startingOffsets", "earliest") \
         .load() \
         .select(from_json(col("value").cast("string"), schema).alias("data")) \
         .selectExpr("data.articles.content")

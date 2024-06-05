@@ -12,8 +12,8 @@ services:
       - ./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
     environment:
       XPACK_MONITORING_ENABLED: "false"
-
-
+    ports:
+      - "5044:5044"
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
@@ -77,7 +77,7 @@ services:
       - OLLAMA_HOST=0.0.0.0
   elasticsearch:   
     container_name: elasticsearch 
-    image: elasticsearch:8.8.0
+    image: elasticsearch:8.13.4
     ports:
       - 9200:9200
     volumes:
@@ -96,7 +96,7 @@ services:
       - topics
         
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.8.0
+    image: docker.elastic.co/kibana/kibana:8.13.4
     container_name: kibana
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
