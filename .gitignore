@@ -4,3 +4,7 @@
 /sparl_apps
 /data
 /book_data
+/chromadb
+/.ipynb_checkpoints
+/.data_volume
+/docker

@@ -48,7 +48,7 @@ def get_conversational_chain():
         base_url="http://ollama:11434/v1",
         temperature=0,
         api_key="not needed",
-        model_name="gemma",
+        model_name="gemma:2b",
     )
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)

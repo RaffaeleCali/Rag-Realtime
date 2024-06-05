@@ -13,6 +13,7 @@ import elasticsearch
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from sentence_transformers import SentenceTransformer
 from elasticsearch import Elasticsearch
+from pyspark.conf import SparkConf
 
 def generate_sha256_hash_from_text(text) -> str:
     sha256_hash = hashlib.sha256()
@@ -32,7 +33,6 @@ def process_batch(batch_df, batch_id):
         for split in splits:
             hash = generate_sha256_hash_from_text(split)
             # Controlla l'esistenza di ciascun hash/documento
-            #prova texts_exists(es, es_index, hash)
             prova = es_cli.exists(index=es_index, id=hash)
             print(prova)
             if not prova:
@@ -47,43 +47,44 @@ def process_batch(batch_df, batch_id):
                 print("Documento già presente")
 
 
-#model = SentenceTransformer("nomic-ai/nomic-embed-text-v1", trust_remote_code=True)
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 
-#embedding_function = CustomEmbeddingFunction(model)
 
-#model = SentenceTransformer("all-MiniLM-L6-v2")
-spark = SparkSession.builder.appName("kafkatospark").getOrCreate()
+sparkConf = SparkConf().set("es.nodes", "elasticsearch") \
+                        .set("es.port", "9200")
+
+spark = SparkSession.builder.appName("kafkatospark").config(conf=sparkConf).getOrCreate()
+
+
 
 kafkaServer="broker:9092"
 topic = "datapipe"
             
 
 es_index = "spark-index"
-#embedding_function = CustomEmbeddingFunction(model)
+
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 spark.sparkContext.setLogLevel("ERROR")
-#es_host = Elasticsearch(es_host="http://elasticsearch:9200",index_name= es_index)
 
 
-es_cli = Elasticsearch("http://elasticsearch:9200")
+#es_cli = Elasticsearch("http://elasticsearch:9200")
 
-es = ElasticsearchStore(
-    index_name= es_index,
-    es_url="http://elasticsearch:9200",
-    embedding= HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2", model_kwargs={"device": "cpu"}
-    ),
+#es = ElasticsearchStore(
+#    index_name= es_index,
+#    es_url="http://elasticsearch:9200",
+#    embedding= HuggingFaceEmbeddings(
+#        model_name="all-MiniLM-L6-v2", model_kwargs={"device": "cpu"}
+#    ),
     #distance_strategy="COSINE",
-)
+#)
 
 
 #strategy=ElasticsearchStore.ApproxRetrievalStrategy(
 #        hybrid=True,
 #    )
 
-# Creazione dell'istanza della classe di funzione di embedding
+
 
 article_schema = StructType([
         StructField("url", StringType(), True),
@@ -115,18 +116,18 @@ df = spark.readStream.format('kafka') \
         .option('subscribe', topic) \
         .option("startingOffsets", "earliest") \
         .load() \
-        .select(from_json(col("value").cast("string"), schema).alias("data")) \
-        .selectExpr("data.articles.content")
-#.select(from_json(df.json, schema).alias('rowdata')) \
-        
+        .select(from_json(col("value").cast("string"), schema).alias("data")) 
 
-
-
+#dfall = df.selectExpr   #("data.articles.content")
 
 df.writeStream \
-    .foreachBatch(process_batch) \
-    .start() \
+    .option("checkpointLocation", "/tmp/") \
+    .format("es") \
+    .start("prova_tutti") \
     .awaitTermination()
+
+
+
 
 #df.writeStream \
 #.format("console") \
