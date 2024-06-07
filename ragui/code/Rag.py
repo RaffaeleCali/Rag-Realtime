@@ -14,7 +14,7 @@ embedding_model = HuggingFaceEmbeddings(
 )
 
 es_cli = Elasticsearch("http://elasticsearch:9200")
-es_index = "spark-index"
+es_index = "prova_tutti"
 es_store = ElasticsearchStore(
     index_name=es_index,
     es_url="http://elasticsearch:9200",
