@@ -28,13 +28,18 @@ es_store = ElasticsearchStore(
     distance_strategy='COSINE'
 )
 
-
+modell = ChatOpenAI(
+        base_url="http://ollama:11434/v1",
+        temperature=0,
+        api_key="not needed",
+        model_name="gemma:2b",
+    )
 
 
 # Funzione di recupero documenti
 def retrieve_documents(query):
     try:
-        results = es_store.similarity_search(query=query, k=1 )
+        results = es_store.similarity_search(query=query, k=3 )
         return results
     except Exception as e:
         print(f"Error retrieving documents: {e}")
@@ -53,12 +58,7 @@ def get_conversational_chain():
     Question: \n{question}\n
     Answer:
     """
-    model = ChatOpenAI(
-        base_url="http://ollama:11434/v1",
-        temperature=0,
-        api_key="not needed",
-        model_name="gemma:2b",
-    )
+    model = modell
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
     return chain

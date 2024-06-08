@@ -51,12 +51,14 @@ services:
     hostname: spark
     container_name: spark
     volumes:
-      - .data_volume/:/opt/tap/
+      - ./data_volume:/home/spark/data_volume
+      - ./tmp:/tmp  # Monta ./tmp per mantenere la cache delle dipendenze di Ivy
     command: > 
-      /opt/spark/bin/spark-submit --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.4,com.johnsnowlabs.nlp:spark-nlp_2.12:5.3.3  streaming.py
+      /opt/spark/bin/spark-submit --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.4,com.johnsnowlabs.nlp:spark-nlp_2.12:5.3.3  /home/spark/streaming.py
     depends_on:
       topics:
         condition: service_completed_successfully
+
  
   ollama:
     build:
@@ -121,10 +123,10 @@ services:
 
 volumes:
   data_volume:
-    driver: local
-    driver_opts:
-      type: 'bind'
-      o: 'bind'
-      device: '/home/raffaelecali/Documenti/magistrale/tap/progetto_sp/data/'
+#    driver: local
+#    driver_opts:
+#      type: 'bind'
+#      o: 'bind'
+#      device: '/home/raffaelecali/Documenti/magistrale/tap/progetto_sp/data/'
   spark-logs:
   
