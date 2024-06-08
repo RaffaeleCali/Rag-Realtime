@@ -14,6 +14,8 @@ RUN pip3 install einops nomic numpy
 RUN pip3 install  langchain_elasticsearch
 RUN pip3 install sentence_transformers
 RUN pip install spark-nlp==5.3.3
+#RUN pip install sparknlp.annotator.embeddings.nomic_embeddings
+RUN apt-get update && apt-get install -y curl
 RUN mkdir -p /home/spark && chmod -R 777 /home/spark
 COPY ./streaming/code /opt/spark/work-dir
 WORKDIR /opt/spark/work-dir

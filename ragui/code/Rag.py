@@ -6,26 +6,35 @@ from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import ElasticsearchStore
 from elasticsearch import Elasticsearch
+#from langchain_nomic.embeddings import NomicEmbeddings
+import os
 
-# Inizializzazione del modello di embedding e del client Elasticsearch
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
+
+#embedding_model = NomicEmbeddings(model="gte-small")
 embedding_model = HuggingFaceEmbeddings(
-    model_name="all-MiniLM-L6-v2",
+    model_name="thenlper/gte-small",
     model_kwargs={"device": "cpu"}
 )
 
-es_cli = Elasticsearch("http://elasticsearch:9200")
-es_index = "prova_tutti"
+es_connection = Elasticsearch("http://elasticsearch:9200")
+es_indexd = "test5"
+
 es_store = ElasticsearchStore(
-    index_name=es_index,
-    es_url="http://elasticsearch:9200",
+    es_connection=es_connection,
+    index_name="test5",
     embedding=embedding_model,
-    distance_strategy="COSINE"
+    vector_query_field='vector',
+    distance_strategy='COSINE'
 )
+
+
+
 
 # Funzione di recupero documenti
 def retrieve_documents(query):
     try:
-        results = es_store.similarity_search(query=query, k=6)
+        results = es_store.similarity_search(query=query, k=1 )
         return results
     except Exception as e:
         print(f"Error retrieving documents: {e}")

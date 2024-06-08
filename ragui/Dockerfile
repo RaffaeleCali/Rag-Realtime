@@ -15,5 +15,8 @@ RUN apt-get update && apt-get install -y curl
 WORKDIR /app
 # Make port 8501 available to the world outside this container
 EXPOSE 8501
+
+RUN pip install sparknlp
+RUN pip install huggingface-cli 
 # Comando per eseguire l'applicazione Streamlit
 CMD ["streamlit", "run", "Rag.py"]
