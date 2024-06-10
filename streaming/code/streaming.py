@@ -1,10 +1,14 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, create_map, lit, udf
+import pyspark.sql.functions as F
+
+from pyspark.sql.functions import from_json, col, create_map, lit
 from pyspark.sql.types import StructType, StructField, StringType, ArrayType, FloatType
 from pyspark.conf import SparkConf
 import sparknlp
-from sparknlp.base import *
-from sparknlp.annotator import *
+#from sparknlp.base import DocumentAssembler, Finisher
+from sparknlp.base import DocumentAssembler, Pipeline, EmbeddingsFinisher
+from sparknlp.annotator import Tokenizer, BertEmbeddings, SentenceEmbeddings 
+from sparknlp.pretrained import PretrainedPipeline
 from pyspark.ml import Pipeline
 
 # Configurazione Spark
@@ -28,7 +32,7 @@ kafkaServer = "broker:9092"
 topic = "datapipe"
 elastic_index = "tes"
 
-# Schema
+# Schema per gli articoli
 article_schema = StructType([
     StructField("url", StringType(), True),
     StructField("publishedAt", StringType(), True),
@@ -61,57 +65,74 @@ df = spark \
     .option("failOnDataLoss", "false") \
     .load()
 
-df = df.selectExpr("CAST(value AS STRING)") \
-    .select(from_json("value", schema).alias("data")) \
-    .selectExpr("data.timestamp as timestamp", "data.articles.*")
+df = df.selectExpr("CAST(value AS STRING)", "timestamp AS kafka_timestamp") \
+    .select(from_json("value", schema).alias("data"), "kafka_timestamp") \
+    .selectExpr("data.timestamp as timestamp", "data.articles.*", "kafka_timestamp")
+
 
 df1 = df.filter(df["content"].isNotNull()) \
         .withColumnRenamed("content", "text")
 
-# Pipeline NLP con BertSentenceEmbeddings
+# Configurazione del Pipeline con BertEmbeddings usando il modello gte_small
+
+# Configurazione degli annotatori
 document_assembler = DocumentAssembler() \
     .setInputCol("text") \
     .setOutputCol("document")
 
-sentence_detector = SentenceDetector() \
+tokenizer = Tokenizer() \
     .setInputCols(["document"]) \
-    .setOutputCol("sentence")
+    .setOutputCol("token")
 
-bert_sentence_embeddings = BertSentenceEmbeddings.pretrained("sent_small_bert_L4_512", "en") \
-    .setInputCols(["sentence"]) \
-    .setOutputCol("sentence_embeddings") \
-    .setCaseSensitive(True) \
-    .setMaxSentenceLength(512)
+# Sostituisci "bert_base_cased" con "gte_small" se disponibile
+bert_embeddings = BertEmbeddings.pretrained("gte_small", "en") \
+    .setInputCols(["document", "token"]) \
+    .setOutputCol("embeddings")
 
+sentence_embeddings = SentenceEmbeddings() \
+      .setInputCols(["document", "embeddings"]) \
+      .setOutputCol("sentence_embeddings")
+
+embeddings_finisher = EmbeddingsFinisher() \
+      .setInputCols(["sentence_embeddings"]) \
+      .setOutputCols(["finished_sentence_embeddings"])
+
+# Creazione del pipeline
 pipeline = Pipeline(stages=[
     document_assembler,
-    sentence_detector,
-    bert_sentence_embeddings
+    tokenizer,
+    bert_embeddings,
+    sentence_embeddings,
+    embeddings_finisher
 ])
+
 
 model = pipeline.fit(df1)
 result = model.transform(df1)
 
-# Funzione per estrarre il primo elemento degli embeddings
-def extract_cls_embedding(embeddings):
-    if len(embeddings) > 0:
-        return embeddings[0]
-    else:
-        return []
-
-extract_cls_udf = udf(extract_cls_embedding, ArrayType(FloatType()))
-
 # Creazione delle colonne per testo e vettore di embedding
-result_df = result.withColumn("vector", extract_cls_udf(col("sentence_embeddings.embeddings")))
-
-# Creazione del campo metadata come mappa
+#result_df = result.withColumn("vector", col("embeddings.embeddings"))
+# Estrarre frasi e embeddings associati
+result_df = result.select("kafka_timestamp", F.explode(F.arrays_zip(result.sentence_embeddings.result, 
+       result.sentence_embeddings.embeddings)).alias("cols")) \
+                  .select(
+                      col("kafka_timestamp"),
+                      F.expr("cols['0']").alias("sentence"),
+                      F.expr("cols['1']").alias("sentence_embeddings")
+                  )
 result_df = result_df.withColumn("metadata", create_map(
-    lit("text"), col("text")
+    lit("text"), col("sentence"),  # Qui usi 'sentence' invece di 'text' se vuoi la frase esatta
 ))
-
+result_df = result_df.withColumn("vector", col("sentence_embeddings"))
+#result_df = result_df.withColumn("sente", col("sentence"))
 # Selezione dei campi e preparazione per Elasticsearch
-result_df = result_df.select("url", "publishedAt", "description", "source", "title", "urlToImage", "author", "timestamp","text" ,"metadata", "vector")
-
+#result_df = result_df.select(
+#    "url", "publishedAt", "description", "source", "title", "urlToImage", "author", "timestamp", "text", "metadata", "vector"
+#)
+result_df = result_df.join(df1, "kafka_timestamp")
+result_df = result_df.select(
+    "url", "publishedAt", "description", "source", "kafka_timestamp","title", "urlToImage", "author", "timestamp", "text", "metadata", "vector"
+)
 query = result_df.writeStream \
     .option("checkpointLocation", "/tmp/checkpoints") \
     .format("org.elasticsearch.spark.sql") \

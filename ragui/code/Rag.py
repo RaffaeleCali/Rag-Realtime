@@ -10,12 +10,22 @@ from elasticsearch import Elasticsearch
 import os
 from langchain_community.embeddings.johnsnowlabs import JohnSnowLabsEmbeddings
 import johnsnowlabs
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
+
+#embedding_model = NomicEmbeddings(model="gte-small")
+#embedding_model = JohnSnowLabsEmbeddings(
+#    model="embed_sentence.small_bert_L4_512"
+#)
+
 #os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
 
 #embedding_model = NomicEmbeddings(model="gte-small")
-embedding_model = JohnSnowLabsEmbeddings(
-    model="embed_sentence.small_bert_L4_512"
+embedding_model = HuggingFaceEmbeddings(
+    model_name="thenlper/gte-small",
+    model_kwargs={"device": "cpu"}
 )
+
 
 es_connection = Elasticsearch("http://elasticsearch:9200")
 es_indexd = "tes"
