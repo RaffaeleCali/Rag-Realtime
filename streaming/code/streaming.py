@@ -77,7 +77,7 @@ sentence_detector = SentenceDetector() \
     .setInputCols(["document"]) \
     .setOutputCol("sentence")
 
-bert_sentence_embeddings = BertSentenceEmbeddings.pretrained("sent_small_bert_L4_256", "en") \
+bert_sentence_embeddings = BertSentenceEmbeddings.pretrained("sent_small_bert_L4_512", "en") \
     .setInputCols(["sentence"]) \
     .setOutputCol("sentence_embeddings") \
     .setCaseSensitive(True) \

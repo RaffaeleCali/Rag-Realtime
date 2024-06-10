@@ -14,7 +14,7 @@ import johnsnowlabs
 
 #embedding_model = NomicEmbeddings(model="gte-small")
 embedding_model = JohnSnowLabsEmbeddings(
-    model="embed_sentence.small_bert_L4_256"
+    model="embed_sentence.small_bert_L4_512"
 )
 
 es_connection = Elasticsearch("http://elasticsearch:9200")
@@ -46,12 +46,10 @@ def retrieve_documents(query):
         return []
 
 
-q = retrieve_documents("machine learning")
-print(f"qusto è q ",q)
+
 # Funzione per visualizzare i risultati del retriever
 def print_retriever_results(results):
     for doc in results:
-        print("porco dio oooo")
         print(doc.page_content)
 
 # Funzione per creare la catena conversazionale
