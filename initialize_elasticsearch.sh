@@ -10,7 +10,7 @@ done
 ES_URL="http://elasticsearch:9200"
 
 # Nome dell'indice
-INDEX_NAME="test5"
+INDEX_NAME="tes"
 
 # Configurazione dell'indice
 INDEX_CONFIG='{
@@ -33,7 +33,7 @@ INDEX_CONFIG='{
       "metadata": { "type": "object" },
       "vector": {
         "type": "dense_vector",
-        "dims": 384,
+        "dims": 256,
         "index": true,
         "similarity": "cosine"
       }

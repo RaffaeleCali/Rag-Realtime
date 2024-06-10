@@ -1,11 +1,11 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, explode, lit, create_map
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.functions import from_json, col, create_map, lit, udf
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, FloatType
 from pyspark.conf import SparkConf
 import sparknlp
 from sparknlp.base import *
 from sparknlp.annotator import *
-import os
+from pyspark.ml import Pipeline
 
 # Configurazione Spark
 sparkConf = SparkConf() \
@@ -26,7 +26,7 @@ spark.sparkContext.setLogLevel("ERROR")
 # Kafka e ElasticSearch Config
 kafkaServer = "broker:9092"
 topic = "datapipe"
-elastic_index = "test5"
+elastic_index = "tes"
 
 # Schema
 article_schema = StructType([
@@ -58,6 +58,7 @@ df = spark \
     .option("kafka.bootstrap.servers", kafkaServer) \
     .option("subscribe", topic) \
     .option("startingOffsets", "earliest") \
+    .option("failOnDataLoss", "false") \
     .load()
 
 df = df.selectExpr("CAST(value AS STRING)") \
@@ -67,40 +68,49 @@ df = df.selectExpr("CAST(value AS STRING)") \
 df1 = df.filter(df["content"].isNotNull()) \
         .withColumnRenamed("content", "text")
 
-# Pipeline NLP
+# Pipeline NLP con BertSentenceEmbeddings
 document_assembler = DocumentAssembler() \
     .setInputCol("text") \
     .setOutputCol("document")
 
-bert_tokenizer = Tokenizer() \
+sentence_detector = SentenceDetector() \
     .setInputCols(["document"]) \
-    .setOutputCol("token")
+    .setOutputCol("sentence")
 
-bert_model_path = "/tmp/bert_base_cased_model"
-
-if not os.path.exists(bert_model_path):
-    bert_embeddings = BertEmbeddings.pretrained("gte_small", "en") \
-        .setInputCols(["document", "token"]) \
-        .setOutputCol("embeddings")
-    bert_embeddings.write().overwrite().save(bert_model_path)
-else:
-    bert_embeddings = BertEmbeddings.load(bert_model_path)
+bert_sentence_embeddings = BertSentenceEmbeddings.pretrained("sent_small_bert_L4_256", "en") \
+    .setInputCols(["sentence"]) \
+    .setOutputCol("sentence_embeddings") \
+    .setCaseSensitive(True) \
+    .setMaxSentenceLength(512)
 
 pipeline = Pipeline(stages=[
     document_assembler,
-    bert_tokenizer,
-    bert_embeddings
+    sentence_detector,
+    bert_sentence_embeddings
 ])
 
 model = pipeline.fit(df1)
 result = model.transform(df1)
 
-result.printSchema()
+# Funzione per estrarre il primo elemento degli embeddings
+def extract_cls_embedding(embeddings):
+    if len(embeddings) > 0:
+        return embeddings[0]
+    else:
+        return []
+
+extract_cls_udf = udf(extract_cls_embedding, ArrayType(FloatType()))
+
+# Creazione delle colonne per testo e vettore di embedding
+result_df = result.withColumn("vector", extract_cls_udf(col("sentence_embeddings.embeddings")))
+
+# Creazione del campo metadata come mappa
+result_df = result_df.withColumn("metadata", create_map(
+    lit("text"), col("text")
+))
 
 # Selezione dei campi e preparazione per Elasticsearch
-result_df = result.select("url", "publishedAt", "description", "source", "title", "urlToImage", "text", "author", "timestamp", explode(result.embeddings).alias("embedding_struct")) \
-    .select("url", "publishedAt", "description", "source", "title", "urlToImage", "text", "author", "timestamp", col("embedding_struct.embeddings").alias("vector")) \
-    .withColumn("metadata", create_map(lit("key"), lit("value")))
+result_df = result_df.select("url", "publishedAt", "description", "source", "title", "urlToImage", "author", "timestamp","text" ,"metadata", "vector")
 
 query = result_df.writeStream \
     .option("checkpointLocation", "/tmp/checkpoints") \

@@ -50,6 +50,8 @@ services:
       dockerfile: streaming/Dockerfile
     hostname: spark
     container_name: spark
+    ports:
+      - 5404:5404
     volumes:
       - ./data_volume:/home/spark/data_volume
       - ./tmp:/tmp  # Monta ./tmp per mantenere la cache delle dipendenze di Ivy
@@ -97,6 +99,13 @@ services:
     depends_on:
       - topics
         
+  
+  
+
+  
+  
+  
+  
   kibana:
     image: docker.elastic.co/kibana/kibana:8.13.4
     container_name: kibana
@@ -108,6 +117,9 @@ services:
       elasticsearch:
         condition: service_started
   
+
+
+
   ollama_interface:
     build:
       context: .  # Imposta il contesto di costruzione al livello superiore
@@ -120,6 +132,7 @@ services:
     environment:
       - ES_HOST=http://elasticsearch:9200
       - ES_INDEX=spark-index
+   
 
 volumes:
   data_volume:

@@ -30,4 +30,4 @@ WORKDIR /home/spark
 USER spark
 
 # Impostare il comando di avvio
-CMD ["/opt/spark/bin/spark-submit", "--conf", "spark.driver.extraJavaOptions=-Divy.cache.dir=/tmp -Divy.home=/tmp", "--packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.4,com.johnsnowlabs.nlp:spark-nlp_2.12:5.3.3", "/home/spark/streaming.py"]
+#CMD ["/opt/spark/bin/spark-submit", "--conf", "spark.driver.extraJavaOptions=-Divy.cache.dir=/tmp -Divy.home=/tmp", "--packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.4,com.johnsnowlabs.nlp:spark-nlp_2.12:5.3.3", "/home/spark/streaming.py"]

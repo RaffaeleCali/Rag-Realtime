@@ -8,21 +8,21 @@ from langchain_community.vectorstores import ElasticsearchStore
 from elasticsearch import Elasticsearch
 #from langchain_nomic.embeddings import NomicEmbeddings
 import os
-
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
+from langchain_community.embeddings.johnsnowlabs import JohnSnowLabsEmbeddings
+import johnsnowlabs
+#os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
 
 #embedding_model = NomicEmbeddings(model="gte-small")
-embedding_model = HuggingFaceEmbeddings(
-    model_name="thenlper/gte-small",
-    model_kwargs={"device": "cpu"}
+embedding_model = JohnSnowLabsEmbeddings(
+    model="embed_sentence.small_bert_L4_256"
 )
 
 es_connection = Elasticsearch("http://elasticsearch:9200")
-es_indexd = "test5"
+es_indexd = "tes"
 
 es_store = ElasticsearchStore(
     es_connection=es_connection,
-    index_name="test5",
+    index_name=es_indexd ,
     embedding=embedding_model,
     vector_query_field='vector',
     distance_strategy='COSINE'
@@ -45,9 +45,13 @@ def retrieve_documents(query):
         print(f"Error retrieving documents: {e}")
         return []
 
+
+q = retrieve_documents("machine learning")
+print(f"qusto è q ",q)
 # Funzione per visualizzare i risultati del retriever
 def print_retriever_results(results):
     for doc in results:
+        print("porco dio oooo")
         print(doc.page_content)
 
 # Funzione per creare la catena conversazionale
