@@ -64,7 +64,7 @@ df = spark \
     .option("startingOffsets", "earliest") \
     .option("failOnDataLoss", "false") \
     .load()
-
+#.option("startingOffsets", "latest") \
 df = df.selectExpr("CAST(value AS STRING)", "timestamp AS kafka_timestamp") \
     .select(from_json("value", schema).alias("data"), "kafka_timestamp") \
     .selectExpr("data.timestamp as timestamp", "data.articles.*", "kafka_timestamp")
@@ -84,10 +84,16 @@ tokenizer = Tokenizer() \
     .setInputCols(["document"]) \
     .setOutputCol("token")
 
-# Sostituisci "bert_base_cased" con "gte_small" se disponibile
-bert_embeddings = BertEmbeddings.pretrained("gte_small", "en") \
-    .setInputCols(["document", "token"]) \
-    .setOutputCol("embeddings")
+bert_model_path = "/tmp/bert_base_cased_model"
+import os
+if not os.path.exists(bert_model_path):
+    bert_embeddings = BertEmbeddings.pretrained("gte_small", "en") \
+        .setInputCols(["document", "token"]) \
+        .setOutputCol("embeddings")
+    bert_embeddings.write().overwrite().save(bert_model_path)
+else:
+    bert_embeddings = BertEmbeddings.load(bert_model_path)
+
 
 sentence_embeddings = SentenceEmbeddings() \
       .setInputCols(["document", "embeddings"]) \
@@ -131,7 +137,7 @@ result_df = result_df.withColumn("vector", col("sentence_embeddings"))
 #)
 result_df = result_df.join(df1, "kafka_timestamp")
 result_df = result_df.select(
-    "url", "publishedAt", "description", "source", "kafka_timestamp","title", "urlToImage", "author", "timestamp", "text", "metadata", "vector"
+    "url", "publishedAt", "description", "source", "kafka_timestamp","title", "urlToImage", "author", "timestamp", "metadata", "vector"
 )
 query = result_df.writeStream \
     .option("checkpointLocation", "/tmp/checkpoints") \

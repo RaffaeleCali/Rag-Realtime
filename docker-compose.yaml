@@ -3,7 +3,7 @@ services:
   flask_server:
     image: server_data
     build:
-      context: ./server_data/Dockerfile
+      context: ./server_data
     ports:
       - "5000:5000"
   logstash:
@@ -57,7 +57,7 @@ services:
       - ./tmp:/tmp  # Monta ./tmp per mantenere la cache delle dipendenze di Ivy
       - ./streaming/code/streaming.py:/home/spark/streaming.py
     command: > 
-      /opt/spark/bin/spark-submit --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.4,com.johnsnowlabs.nlp:spark-nlp_2.12:5.3.3  /home/spark/streaming.py
+      /opt/spark/bin/spark-submit --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.2,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.4,com.johnsnowlabs.nlp:spark-nlp_2.12:5.3.3  /home/spark/streaming.py
     depends_on:
       topics:
         condition: service_completed_successfully
