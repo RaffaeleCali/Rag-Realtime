@@ -7,7 +7,7 @@ from pyspark.conf import SparkConf
 import sparknlp
 #from sparknlp.base import DocumentAssembler, Finisher
 from sparknlp.base import DocumentAssembler, Pipeline, EmbeddingsFinisher
-from sparknlp.annotator import Tokenizer, BertEmbeddings, SentenceEmbeddings 
+from sparknlp.annotator import Tokenizer, BertEmbeddings, SentenceEmbeddings , SentenceDetector ,YakeKeywordExtraction
 from sparknlp.pretrained import PretrainedPipeline
 from pyspark.ml import Pipeline
 
@@ -116,9 +116,8 @@ pipeline = Pipeline(stages=[
 model = pipeline.fit(df1)
 result = model.transform(df1)
 
-# Creazione delle colonne per testo e vettore di embedding
-#result_df = result.withColumn("vector", col("embeddings.embeddings"))
-# Estrarre frasi e embeddings associati
+
+
 result_df = result.select("kafka_timestamp", F.explode(F.arrays_zip(result.sentence_embeddings.result, 
        result.sentence_embeddings.embeddings)).alias("cols")) \
                   .select(
@@ -127,18 +126,18 @@ result_df = result.select("kafka_timestamp", F.explode(F.arrays_zip(result.sente
                       F.expr("cols['1']").alias("sentence_embeddings")
                   )
 result_df = result_df.withColumn("metadata", create_map(
-    lit("text"), col("sentence"),  # Qui usi 'sentence' invece di 'text' se vuoi la frase esatta
+    lit("key"), lit("value"),  # Qui usi 'sentence' invece di 'text' se vuoi la frase esatta
 ))
 result_df = result_df.withColumn("vector", col("sentence_embeddings"))
-#result_df = result_df.withColumn("sente", col("sentence"))
-# Selezione dei campi e preparazione per Elasticsearch
-#result_df = result_df.select(
-#    "url", "publishedAt", "description", "source", "title", "urlToImage", "author", "timestamp", "text", "metadata", "vector"
-#)
+
+result_df = result_df.withColumn("page_content", col("sentence"))
+
+
 result_df = result_df.join(df1, "kafka_timestamp")
 result_df = result_df.select(
-    "url", "publishedAt", "description", "source", "kafka_timestamp","title", "urlToImage", "author", "timestamp", "metadata", "vector"
+    "url", "publishedAt", "description", "source","page_content","text", "kafka_timestamp","title", "urlToImage", "author", "timestamp", "metadata", "vector",
 )
+
 query = result_df.writeStream \
     .option("checkpointLocation", "/tmp/checkpoints") \
     .format("org.elasticsearch.spark.sql") \

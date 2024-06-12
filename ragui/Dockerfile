@@ -1,43 +1,30 @@
-# Usa un'immagine base di Ubuntu
-FROM ubuntu:20.04
+# Usa un'immagine base di Python con Streamlit
+FROM python:3.8-slim
 
-# Evita di dover selezionare manualmente l'opzione di timezone durante l'installazione di pacchetti
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Aggiorna i pacchetti di sistema e installa Python e altri strumenti necessari
-RUN apt-get update && apt-get install -y \
-    python3.8 \
-    python3-pip \
-    curl \
-    openjdk-11-jdk \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Imposta Python 3.8 come python predefinito
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 \
-    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-
-# Imposta JAVA_HOME
-ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
-ENV PATH $JAVA_HOME/bin:$PATH
-
-# Copia il file di requisiti prima, per migliorare la cache dei layer di Docker
-COPY ragui/requirements.txt /app/requirements.txt
-
-# Cambia la directory di lavoro
+# Installa le dipendenze
+RUN pip install --upgrade pip
+#COPY ragui/requirements.txt .
+#RUN pip install -r requirements.txt
+RUN pip install streamlit
+RUN pip install langchain
+RUN pip install langchain_community
+RUN pip install  langchain_core
+RUN pip install sentence_transformers
+RUN pip install elasticsearch
+RUN pip install python-dotenv
+RUN pip install langchain_openai
+RUN pip install huggingface-cli
+# Copia il codice dell'applicazione
+RUN mkdir -p /app 
+COPY ./ragui/code /app
+# Install curl
+RUN apt-get update && apt-get install -y curl
+# Imposta la directory di lavoro
 WORKDIR /app
-
-# Installa le dipendenze Python
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copia il resto del codice dell'applicazione nella directory /app
-COPY ./ragui/code .
-
-# Espone la porta su cui gira Streamlit
+# Make port 8501 available to the world outside this container
 EXPOSE 8501
 
-# Installa ulteriori pacchetti Python
-RUN pip install sparknlp huggingface-cli
-RUN pip install --upgrade --quiet  johnsnowlabs
+#RUN pip install sparknlp
+#RUN pip install huggingface-cli 
 # Comando per eseguire l'applicazione Streamlit
 CMD ["streamlit", "run", "Rag.py"]

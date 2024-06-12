@@ -132,10 +132,19 @@ services:
       - ollama
     environment:
       - ES_HOST=http://elasticsearch:9200
-      - ES_INDEX=spark-index
+      - ES_INDEX=tes
     volumes:
       - ./ragui/code/Rag.py:/app/Rag.py
 
+  elasticsearch-init:
+    image: curlimages/curl:latest
+    container_name: elasticsearch-init
+    command: ["sh", "-c", "sh /scripts/initialize_elasticsearch.sh"]
+    volumes:
+      - ./initialize_elasticsearch.sh:/scripts/initialize_elasticsearch.sh
+    depends_on:
+      - elasticsearch
+    restart: "on-failure"
 volumes:
   data_volume:
 #    driver: local
