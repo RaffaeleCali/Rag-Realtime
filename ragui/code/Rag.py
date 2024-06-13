@@ -92,7 +92,7 @@ def handle_user_input(prompt):
 st.set_page_config(page_title="Document Genie", layout="wide")
 
 st.markdown("""
-This chatbot is built using the Retrieval-Augmented Generation (RAG) framework
+This chatbot is built using the Real time Retrieval-Augmented Generation (RAG) framework
 """)
 
 # Initialize chat history in session state
@@ -114,6 +114,6 @@ if prompt := st.chat_input("What is up?", key="first_question"):
         # Retrieve documents and generate response
         response = handle_user_input(prompt)
     st.session_state.messages.append({"role": "assistant", "content": response})
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    #for message in st.session_state.messages:
+    #    with st.chat_message(message["role"]):
+    #        st.markdown(message["content"])

@@ -5,6 +5,7 @@ until curl -s http://elasticsearch:9200 > /dev/null; do
   echo "Waiting for Elasticsearch to be up..."
   sleep 5
 done
+curl -X DELETE "http://elasticsearch:9200/tes"
 
 # URL del server Elasticsearch
 ES_URL="http://elasticsearch:9200"
@@ -33,13 +34,14 @@ INDEX_CONFIG='{
       "metadata": { "type": "object" },
       "vector": {
         "type": "dense_vector",
-        "dims": 256,
+        "dims": 384,
         "index": true,
         "similarity": "cosine"
       }
     }
   }
 }'
+
 
 # Controlla se l'indice esiste già
 if curl -s --head --fail "$ES_URL/$INDEX_NAME"; then

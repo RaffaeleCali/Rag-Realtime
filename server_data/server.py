@@ -22,6 +22,8 @@ def get_random_search_term():
 
 def get_arxiv_articles():
     search_term = get_random_search_term()
+    print(f"Chosen search term: {search_term}")
+    
     base_url = 'http://export.arxiv.org/api/query'
     params = {
         'search_query': f'all:{search_term}',
@@ -48,6 +50,9 @@ def get_arxiv_articles():
             "author": ", ".join([author.find('{http://www.w3.org/2005/Atom}name').text for author in entry.findall('{http://www.w3.org/2005/Atom}author')])
         }
         articles.append(article)
+        print(f"Content: {article['content']}")
+    
+    print(f"Number of articles fetched: {len(articles)}")
     return articles
 
 @app.route('/')

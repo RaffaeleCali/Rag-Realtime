@@ -1,14 +1,11 @@
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
-
 from pyspark.sql.functions import from_json, col, create_map, lit
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, FloatType
+from pyspark.sql.types import StructType, StructField, StringType
 from pyspark.conf import SparkConf
 import sparknlp
-#from sparknlp.base import DocumentAssembler, Finisher
 from sparknlp.base import DocumentAssembler, Pipeline, EmbeddingsFinisher
-from sparknlp.annotator import Tokenizer, BertEmbeddings, SentenceEmbeddings , SentenceDetector ,YakeKeywordExtraction
-from sparknlp.pretrained import PretrainedPipeline
+from sparknlp.annotator import Tokenizer, BertEmbeddings, SentenceEmbeddings, SentenceDetector, YakeKeywordExtraction
 from pyspark.ml import Pipeline
 
 # Configurazione Spark
@@ -64,18 +61,16 @@ df = spark \
     .option("startingOffsets", "earliest") \
     .option("failOnDataLoss", "false") \
     .load()
-#.option("startingOffsets", "latest") \
+
 df = df.selectExpr("CAST(value AS STRING)", "timestamp AS kafka_timestamp") \
     .select(from_json("value", schema).alias("data"), "kafka_timestamp") \
     .selectExpr("data.timestamp as timestamp", "data.articles.*", "kafka_timestamp")
 
-
+# Filtrare e rinominare le colonne necessarie
 df1 = df.filter(df["content"].isNotNull()) \
         .withColumnRenamed("content", "text")
 
-# Configurazione del Pipeline con BertEmbeddings usando il modello gte_small
-
-# Configurazione degli annotatori
+# Configurazione della prima pipeline con BertEmbeddings
 document_assembler = DocumentAssembler() \
     .setInputCol("text") \
     .setOutputCol("document")
@@ -94,17 +89,15 @@ if not os.path.exists(bert_model_path):
 else:
     bert_embeddings = BertEmbeddings.load(bert_model_path)
 
-
 sentence_embeddings = SentenceEmbeddings() \
-      .setInputCols(["document", "embeddings"]) \
-      .setOutputCol("sentence_embeddings")
+    .setInputCols(["document", "embeddings"]) \
+    .setOutputCol("sentence_embeddings")
 
 embeddings_finisher = EmbeddingsFinisher() \
-      .setInputCols(["sentence_embeddings"]) \
-      .setOutputCols(["finished_sentence_embeddings"])
+    .setInputCols(["sentence_embeddings"]) \
+    .setOutputCols(["finished_sentence_embeddings"])
 
-# Creazione del pipeline
-pipeline = Pipeline(stages=[
+pipeline_bert = Pipeline(stages=[
     document_assembler,
     tokenizer,
     bert_embeddings,
@@ -112,33 +105,58 @@ pipeline = Pipeline(stages=[
     embeddings_finisher
 ])
 
+model_bert = pipeline_bert.fit(df1)
+result_bert = model_bert.transform(df1)
 
-model = pipeline.fit(df1)
-result = model.transform(df1)
+# Estrazione delle colonne necessarie
+result_bert = result_bert.withColumn("sentence_embeddings", col("finished_sentence_embeddings")[0])
 
+# Configurazione della seconda pipeline con YakeKeywordExtraction
+sentenceDetector = SentenceDetector() \
+    .setInputCols(["document"]) \
+    .setOutputCol("sentence")
 
+token = Tokenizer() \
+    .setInputCols(["sentence"]) \
+    .setOutputCol("token") \
+    .setContextChars(["(", ")", "?", "!", ".", ","])
 
-result_df = result.select("kafka_timestamp", F.explode(F.arrays_zip(result.sentence_embeddings.result, 
-       result.sentence_embeddings.embeddings)).alias("cols")) \
-                  .select(
-                      col("kafka_timestamp"),
-                      F.expr("cols['0']").alias("sentence"),
-                      F.expr("cols['1']").alias("sentence_embeddings")
-                  )
-result_df = result_df.withColumn("metadata", create_map(
-    lit("key"), lit("value"),  # Qui usi 'sentence' invece di 'text' se vuoi la frase esatta
+keywords = YakeKeywordExtraction() \
+    .setInputCols(["token"]) \
+    .setOutputCol("keywords")
+
+yake_pipeline = Pipeline(stages=[
+    document_assembler,
+    sentenceDetector,
+    token,
+    keywords
+])
+
+yake_model = yake_pipeline.fit(df1)
+result_yake = yake_model.transform(df1)
+
+result_yake = result_yake.withColumn('unique_keywords', F.array_distinct("keywords.result"))
+
+result_yake = result_yake.select("text", 'unique_keywords')
+
+# Combinazione dei risultati delle due pipeline
+final_df = result_bert.join(result_yake, "text")
+
+# Rinomina della colonna `sentence_embeddings` in `vector`
+final_df = final_df.withColumnRenamed("sentence_embeddings", "vector")
+
+# Creazione della colonna `metadata`
+final_df = final_df.withColumn("metadata", create_map(
+    lit("text"), col("text")
 ))
-result_df = result_df.withColumn("vector", col("sentence_embeddings"))
 
-result_df = result_df.withColumn("page_content", col("sentence"))
-
-
-result_df = result_df.join(df1, "kafka_timestamp")
-result_df = result_df.select(
-    "url", "publishedAt", "description", "source","page_content","text", "kafka_timestamp","title", "urlToImage", "author", "timestamp", "metadata", "vector",
+# Selezione delle colonne finali
+final_df = final_df.select(
+    "url", "publishedAt", "description", "source", "kafka_timestamp", "title", "urlToImage", "author", "timestamp", "text", "vector", "unique_keywords", "metadata"
 )
 
-query = result_df.writeStream \
+# Scrittura su Elasticsearch
+query = final_df.writeStream \
     .option("checkpointLocation", "/tmp/checkpoints") \
     .format("org.elasticsearch.spark.sql") \
     .option("es.resource", elastic_index) \
