@@ -71,7 +71,7 @@ def get_conversational_chain():
 
 # Function to handle user input and generate response
 def handle_user_input(prompt):
-    print(prompt)
+    #print(prompt)
     retriever_results = retrieve_documents(prompt)
     print_retriever_results(retriever_results)
 
@@ -114,6 +114,6 @@ if prompt := st.chat_input("What is up?", key="first_question"):
         # Retrieve documents and generate response
         response = handle_user_input(prompt)
     st.session_state.messages.append({"role": "assistant", "content": response})
-    #for message in st.session_state.messages:
-    #    with st.chat_message(message["role"]):
-    #        st.markdown(message["content"])
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])

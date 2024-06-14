@@ -123,7 +123,8 @@ token = Tokenizer() \
 
 keywords = YakeKeywordExtraction() \
     .setInputCols(["token"]) \
-    .setOutputCol("keywords")
+    .setOutputCol("keywords") 
+ #   .setNKeywords(8)
 
 yake_pipeline = Pipeline(stages=[
     document_assembler,
@@ -150,9 +151,13 @@ final_df = final_df.withColumn("metadata", create_map(
     lit("text"), col("text")
 ))
 
+# Filtrare duplicati
+final_df = final_df.dropDuplicates(["text", "vector"])
+final_df = final_df.withColumn("page_content", col("text"))
+
 # Selezione delle colonne finali
 final_df = final_df.select(
-    "url", "publishedAt", "description", "source", "kafka_timestamp", "title", "urlToImage", "author", "timestamp", "text", "vector", "unique_keywords", "metadata"
+    "url", "publishedAt", "description", "source", "kafka_timestamp","page_content" ,"title", "urlToImage", "author", "timestamp", "text", "vector", "unique_keywords", "metadata"
 )
 
 # Scrittura su Elasticsearch

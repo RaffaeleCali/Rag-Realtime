@@ -4,6 +4,8 @@ services:
     image: server_data
     build:
       context: ./server_data
+    volumes:
+      - ./server_data/server.py:/server.py
     ports:
       - "5000:5000"
   logstash:
