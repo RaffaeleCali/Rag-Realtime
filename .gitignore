@@ -9,3 +9,6 @@
 /.data_volume
 /docker
 /tmp
+/mplmodel/tmp
+/mplmodel/data_elastic
+/streaming/spark_mlp_model

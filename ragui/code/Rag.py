@@ -113,7 +113,5 @@ if prompt := st.chat_input("What is up?", key="first_question"):
     with st.chat_message("assistant"):
         # Retrieve documents and generate response
         response = handle_user_input(prompt)
+        st.markdown(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])

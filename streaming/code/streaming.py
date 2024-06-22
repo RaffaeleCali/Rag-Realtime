@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
+from pyspark.sql.functions import udf
 from pyspark.sql.functions import from_json, col, create_map, lit
 from pyspark.sql.types import StructType, StructField, StringType
 from pyspark.conf import SparkConf
@@ -7,6 +8,10 @@ import sparknlp
 from sparknlp.base import DocumentAssembler, Pipeline, EmbeddingsFinisher
 from sparknlp.annotator import Tokenizer, BertEmbeddings, SentenceEmbeddings, SentenceDetector, YakeKeywordExtraction
 from pyspark.ml import Pipeline
+from pyspark.ml.classification import MultilayerPerceptronClassificationModel
+from pyspark.ml.feature import StringIndexerModel
+from pyspark.ml.linalg import Vectors, VectorUDT
+import os
 
 # Configurazione Spark
 sparkConf = SparkConf() \
@@ -70,7 +75,7 @@ df = df.selectExpr("CAST(value AS STRING)", "timestamp AS kafka_timestamp") \
 df1 = df.filter(df["content"].isNotNull()) \
         .withColumnRenamed("content", "text")
 
-# Configurazione della prima pipeline con BertEmbeddings
+# Configurazione della pipeline con BertEmbeddings
 document_assembler = DocumentAssembler() \
     .setInputCol("text") \
     .setOutputCol("document")
@@ -80,7 +85,6 @@ tokenizer = Tokenizer() \
     .setOutputCol("token")
 
 bert_model_path = "/tmp/bert_base_cased_model"
-import os
 if not os.path.exists(bert_model_path):
     bert_embeddings = BertEmbeddings.pretrained("gte_small", "en") \
         .setInputCols(["document", "token"]) \
@@ -111,7 +115,47 @@ result_bert = model_bert.transform(df1)
 # Estrazione delle colonne necessarie
 result_bert = result_bert.withColumn("sentence_embeddings", col("finished_sentence_embeddings")[0])
 
-# Configurazione della seconda pipeline con YakeKeywordExtraction
+# Carica il modello MLP salvato
+mlp_model_path = "/tmp/spark_mlp_modelv"
+mlp_model = MultilayerPerceptronClassificationModel.load(mlp_model_path)
+
+# Carica il modello StringIndexer salvato
+indexer_model_path = "/tmp/string_indexer_model"
+indexer_model = StringIndexerModel.load(indexer_model_path)
+
+# Aggiungi la colonna features e text, applica il modello per ottenere le predizioni
+def to_vector_udf(features):
+    if features and isinstance(features[0], list):
+        flat_list = [item for sublist in features for item in sublist]
+        return Vectors.dense([float(x) for x in flat_list])
+    else:
+        return Vectors.dense([float(x) for x in features])
+
+to_vector = udf(to_vector_udf, VectorUDT())
+
+df_for_prediction = result_bert.withColumn("features", to_vector(col("finished_sentence_embeddings"))).select("text", "features")
+
+# Esegui la predizione
+predictions = mlp_model.transform(df_for_prediction)
+
+# Rinominare la colonna prediction in classpredict
+predictions = predictions.withColumnRenamed("prediction", "classpredict")
+
+# Mappatura delle classi numeriche alle categorie testuali
+labels = indexer_model.labels
+class_mapping = {float(i): label for i, label in enumerate(labels)}
+
+def map_class_to_category(class_index):
+    return class_mapping.get(class_index, 'unknown')
+
+map_class_to_category_udf = udf(map_class_to_category, StringType())
+
+predictions = predictions.withColumn("category", map_class_to_category_udf(col("classpredict")))
+
+# Eseguire il join utilizzando text
+final_df_with_predictions = result_bert.join(predictions.select("text", "category"), "text")
+
+# Configurazione della pipeline con YakeKeywordExtraction
 sentenceDetector = SentenceDetector() \
     .setInputCols(["document"]) \
     .setOutputCol("sentence")
@@ -123,8 +167,7 @@ token = Tokenizer() \
 
 keywords = YakeKeywordExtraction() \
     .setInputCols(["token"]) \
-    .setOutputCol("keywords") 
- #   .setNKeywords(8)
+    .setOutputCol("keywords")
 
 yake_pipeline = Pipeline(stages=[
     document_assembler,
@@ -141,7 +184,7 @@ result_yake = result_yake.withColumn('unique_keywords', F.array_distinct("keywor
 result_yake = result_yake.select("text", 'unique_keywords')
 
 # Combinazione dei risultati delle due pipeline
-final_df = result_bert.join(result_yake, "text")
+final_df = final_df_with_predictions.join(result_yake, "text")
 
 # Rinomina della colonna `sentence_embeddings` in `vector`
 final_df = final_df.withColumnRenamed("sentence_embeddings", "vector")
@@ -157,7 +200,7 @@ final_df = final_df.withColumn("page_content", col("text"))
 
 # Selezione delle colonne finali
 final_df = final_df.select(
-    "url", "publishedAt", "description", "source", "kafka_timestamp","page_content" ,"title", "urlToImage", "author", "timestamp", "text", "vector", "unique_keywords", "metadata"
+    "url", "publishedAt", "description", "source", "kafka_timestamp", "page_content", "title", "urlToImage", "author", "timestamp", "text", "vector", "unique_keywords", "metadata", "category"
 )
 
 # Scrittura su Elasticsearch
