@@ -109,7 +109,7 @@ df_ml.groupBy("label").count().show()
 
 # Configurazione e addestramento del Multilayer Perceptron Classifier
 print("Addestramento del modello MLP...")
-layers = [384, 64, 5]  # Dimensione embedding, hidden layer, output layer
+layers = [384,256,128,64, 5]  # Dimensione embedding, hidden layer, output layer
 mlp = MultilayerPerceptronClassifier(maxIter=20, layers=layers, blockSize=128, seed=42)
 train, test = df_ml.randomSplit([0.7, 0.3], seed=42)
 model = mlp.fit(train)

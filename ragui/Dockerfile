@@ -13,7 +13,7 @@ RUN pip install sentence_transformers
 RUN pip install elasticsearch
 RUN pip install python-dotenv
 RUN pip install langchain_openai
-RUN pip install huggingface-cli
+#RUN pip install huggingface-cli
 # Copia il codice dell'applicazione
 RUN mkdir -p /app 
 COPY ./ragui/code /app

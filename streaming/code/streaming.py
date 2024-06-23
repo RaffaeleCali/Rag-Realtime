@@ -32,7 +32,7 @@ spark.sparkContext.setLogLevel("ERROR")
 # Kafka e ElasticSearch Config
 kafkaServer = "broker:9092"
 topic = "datapipe"
-elastic_index = "tes"
+elastic_index = "dop"
 
 # Schema per gli articoli
 article_schema = StructType([

@@ -20,7 +20,7 @@ embedding_model = HuggingFaceEmbeddings(
 print(embedding_model)
 # Initialize Elasticsearch connection
 es_connection = Elasticsearch("http://elasticsearch:9200")
-es_indexd = "tes"
+es_indexd = "dop"
 
 # Initialize Elasticsearch store
 es_store = ElasticsearchStore(

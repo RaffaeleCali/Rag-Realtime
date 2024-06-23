@@ -6,6 +6,7 @@ services:
       context: ./server_data
     volumes:
       - ./server_data/server.py:/server.py
+      - ./server_data/dataapi:/app/data
     ports:
       - "5000:5000"
   logstash:
@@ -151,4 +152,5 @@ volumes:
 #      o: 'bind'
 #      device: '/home/raffaelecali/Documenti/magistrale/tap/progetto_sp/data/'
   spark-logs:
+
   
