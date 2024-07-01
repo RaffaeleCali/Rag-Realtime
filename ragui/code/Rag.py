@@ -20,7 +20,7 @@ embedding_model = HuggingFaceEmbeddings(
 print(embedding_model)
 # Initialize Elasticsearch connection
 es_connection = Elasticsearch("http://elasticsearch:9200")
-es_indexd = "dop"
+es_indexd = "def"
 
 # Initialize Elasticsearch store
 es_store = ElasticsearchStore(
@@ -49,8 +49,8 @@ def print_retriever_results(results):
     for doc in results:
         print(doc.page_content)
 
-q = retrieve_documents("parlami di battiato")
-print(q)
+#q = retrieve_documents("parlami di battiato")
+#print(q)
 # Function to create the conversational chain
 def get_conversational_chain():
     prompt_template = """

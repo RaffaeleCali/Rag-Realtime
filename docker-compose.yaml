@@ -9,6 +9,9 @@ services:
       - ./server_data/dataapi:/app/data
     ports:
       - "5000:5000"
+    depends_on:
+      logstash:
+        condition: service_started
   logstash:
     image: docker.elastic.co/logstash/logstash:8.13.2
     volumes:

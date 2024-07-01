@@ -5,13 +5,13 @@ until curl -s http://elasticsearch:9200 > /dev/null; do
   echo "Waiting for Elasticsearch to be up..."
   sleep 5
 done
-#curl -X DELETE "http://elasticsearch:9200/dop"
+#curl -X DELETE "http://elasticsearch:9200/def"
 
 # URL del server Elasticsearch
 ES_URL="http://elasticsearch:9200"
 
 # Nome dell'indice
-INDEX_NAME="dop"
+INDEX_NAME="def"
 
 # Configurazione dell'indice
 INDEX_CONFIG='{

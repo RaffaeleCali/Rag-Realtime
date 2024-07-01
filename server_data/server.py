@@ -6,6 +6,7 @@ import json
 import socket
 import pandas as pd
 import os
+import pickle
 
 app = Flask(__name__)
 
@@ -22,15 +23,17 @@ LAST_FETCH_DATE_FILE = os.path.join(DATA_DIR, 'last_fetch_date.txt')
 
 # Initialize the DataFrame to store articles
 if os.path.exists(ARTICLES_FILE) and os.path.getsize(ARTICLES_FILE) > 0:
+    print("sto leggendo dal dataset gia creato")
     articles_df = pd.read_pickle(ARTICLES_FILE)
 else:
     articles_df = pd.DataFrame(columns=["url", "publishedAt", "description", "source", "title", "urlToImage", "content", "author"])
-
+    print("creo il dataset")
 # Initialize the index to serve articles
 if os.path.exists(INDEX_FILE) and os.path.getsize(INDEX_FILE) > 0:
     with open(INDEX_FILE, 'r') as f:
         current_index = int(f.read())
 else:
+    print("porco paletta")
     current_index = 0
 
 def save_index():
@@ -38,11 +41,10 @@ def save_index():
         f.write(str(current_index))
 
 
-
-# Lista estesa di termini di ricerca
-search_terms = [
-    "quantum computing", "machine learning", "neural networks", "artificial intelligence",
-    "blockchain", "cybersecurity", "biotechnology", "nanotechnology", "genomics", "space exploration",
+#fino a drug discovery processes
+#  "quantum computing", "machine learning", "neural networks", "artificial intelligence",
+#    "blockchain", "cybersecurity", "biotechnology", 
+search_terms = [ "nanotechnology","genomics", "space exploration",
     "Quantum cryptography", "Neural network architectures", "Deep learning optimization",
     "Generative adversarial networks", "Reinforcement learning applications", "Graph neural networks",
     "Autonomous robotics", "Natural language processing", "Computer vision techniques", "Bioinformatics algorithms",
@@ -72,7 +74,6 @@ search_terms = [
 
 # Indice per tenere traccia del termine di ricerca corrente
 current_search_index = 0
-
 def get_next_search_term():
     global current_search_index
     term = search_terms[current_search_index]
@@ -87,7 +88,7 @@ def get_arxiv_articles():
     params = {
         'search_query': f'all:{search_term}',
         'start': 0,
-        'max_results': 10
+        'max_results': 30
     }
 
     response = requests.get(base_url, params=params)
@@ -114,7 +115,7 @@ def get_google_news_articles():
     url = "https://google-news13.p.rapidapi.com/latest"
     querystring = {"lr": "en-US"}
     headers = {
-        "x-rapidapi-key": "fae25dc23fmshcfb1a2f7bc61ac4p19044cjsn2e8919ff62dd",  # Replace with your actual RapidAPI key
+        "x-rapidapi-key": "fae25dc23fmshcfb1a2f7bc61ac4p19044cjsn2e8919ff62dd", 
         "x-rapidapi-host": "google-news13.p.rapidapi.com"
     }
 
@@ -149,9 +150,10 @@ def index():
 
 @app.route('/get_articles', methods=['GET'])
 def get_articles():
+    print("sono dentro ")
     global current_index, articles_df
     print(f"Serving articles from index: {current_index}")
-    
+    print("qaulcoaosas ")
     # Controlla se abbiamo raggiunto o superato la fine del dataframe
     if current_index >= len(articles_df):
         data = {
@@ -182,7 +184,7 @@ def get_articles():
         "totalResults": str(len(articles))
     }
     print("Returning articles data to client")
-    print(data)
+    print(data,flush=True)
     send_to_logstash(data)
     return jsonify(data)
 
@@ -237,18 +239,23 @@ def fetch_google_news_articles_route():
     global articles_df
     today = date.today().isoformat()
     
-    if os.path.exists('last_fetch_date.txt'):
-        with open('last_fetch_date.txt', 'r') as f:
+    if os.path.exists(LAST_FETCH_DATE_FILE):
+        with open(LAST_FETCH_DATE_FILE, 'r') as f:
+            print("sto leggendo la data")
             last_fetch_date = f.read().strip()
     else:
         last_fetch_date = ""
 
     if last_fetch_date != today:
+        with open(LAST_FETCH_DATE_FILE, 'w') as file:
+            file.write('0')
+        with open(ARTICLES_FILE, 'wb') as file:
+            pickle.dump({}, file)
         print("Fetching new articles from Google News API")
         articles = get_google_news_articles()
         articles_df = pd.concat([articles_df, pd.DataFrame(articles)], ignore_index=True)
-        articles_df.to_pickle('articles.pkl')
-        with open('last_fetch_date.txt', 'w') as f:
+        articles_df.to_pickle(ARTICLES_FILE)
+        with open(LAST_FETCH_DATE_FILE, 'w') as f:
             f.write(today)
         message = "Fetched new articles."
     else:
@@ -262,7 +269,7 @@ def fetch_google_news_articles_route():
         "status": "ok",
         "message": message
     }
-    print(data)
+    #print(data)
     #send_to_logstash(data)
     return jsonify(data)
 
@@ -276,8 +283,10 @@ def send_to_logstash(data):
 
 def fetch_initial_articles():
     with app.app_context():
+        print("chiamp la funzione iniziale")
         fetch_google_news_articles_route()
 
 if __name__ == '__main__':
     fetch_initial_articles()
+    count_req = 0
     app.run(host='0.0.0.0', port=5000)

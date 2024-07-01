@@ -6,16 +6,12 @@ RUN apt-get update && apt-get install -y python3 python3-pip && ln -s /usr/bin/p
 #RUN apt-get install nano
  
 RUN pip install flask 
-#RUN pip install sentence_transformers
 
 
-RUN pip install chromadb langchain langchain_community langchain_chroma
 
-
-RUN pip install einops nomic numpy
 
 RUN mkdir data
-RUN pip install langchain_chroma
+
 #RUN pip install hashlib transformers torch 
 
 #COPY ollama/ollama /root/.ollama
