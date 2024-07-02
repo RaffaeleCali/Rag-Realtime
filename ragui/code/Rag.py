@@ -8,71 +8,74 @@ from elasticsearch import Elasticsearch
 import os
 import time
 
+# Streamlit page configuration
+st.set_page_config(page_title="Document Genie", layout="wide")
 
 # Set environment variable for Hugging Face API token
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
-print("chiave impostata")
+print("API key set", flush=True)
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 # Initialize embedding model
-embedding_model = HuggingFaceEmbeddings(
-    model_name= "thenlper/gte-small",
-    model_kwargs={"device": "cpu"}
-)
-print(embedding_model)
+@st.cache_resource
+def load_embedding_model():
+    model = HuggingFaceEmbeddings(
+        model_name="thenlper/gte-small",
+        model_kwargs={"device": "cpu"}
+    )
+    return model
+
+
 # Initialize Elasticsearch connection
-es_connection = Elasticsearch("http://elasticsearch:9200")
-es_indexd = "def"
+@st.cache_resource
+def load_elasticsearch():
+    return Elasticsearch("http://elasticsearch:9200")
 
 # Initialize Elasticsearch store
-es_store = ElasticsearchStore(
-    es_connection=es_connection,
-    index_name=es_indexd,
-    embedding=embedding_model,
-    vector_query_field='vector',
-    distance_strategy='COSINE'
-)
+@st.cache_resource
+def load_elasticsearch_store(_es_connection, _embedding_model):
+    return ElasticsearchStore(
+        es_connection=_es_connection,
+        index_name="def",
+        embedding=_embedding_model,
+        vector_query_field='vector',
+        distance_strategy='COSINE'
+    )
 
-print("connesso ad elastic")
-# Initialize language model
-#modell =
-
-# Function to retrieve documents from Elasticsearch
-def retrieve_documents(query):
-    try:
-        results = es_store.similarity_search(query=query, k=3)
-        return results
-    except Exception as e:
-        print.error(f"Error retrieving documents: {e}")
-        return []
-
-# Function to print retriever results for debugging
-def print_retriever_results(results):
-    for doc in results:
-        print(doc.page_content)
-
-#q = retrieve_documents("parlami di battiato")
-#print(q)
 # Function to create the conversational chain
+@st.cache_resource
 def get_conversational_chain():
     prompt_template = """
-    Answer the question as detailed as possible from the provided context. If the answer is not in the context, just say, "answer is not available in the context", don't provide the wrong answer.\n\n
+    Try answering the question with context, if you don't use context you only say by putting dashes - - not by context \n\n
     Context:\n {context}?\n
     Question: \n{question}\n
     Answer:
     """
-    model =  ChatOpenAI(
+    model = ChatOpenAI(
         base_url="http://ollama:11434/v1",
         temperature=0,
         api_key="not needed",
         model_name="gemma:2b",
     )
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
-    return chain
+    return load_qa_chain(model, chain_type="stuff", prompt=prompt)
+
+# Function to retrieve documents from Elasticsearch
+def retrieve_documents(query):
+    results = es_store.similarity_search(query=query, k=3)
+    return results
+
+# Function to print retriever results for debugging
+def print_retriever_results(results):
+    print("Documents retrieved from the database:", flush=True)
+    for doc in results:
+        print(doc.page_content, flush=True)
 
 # Function to handle user input and generate response
-def handle_user_input(prompt):
-    #print(prompt)
+def handle_user_input(prompt, chain):
     retriever_results = retrieve_documents(prompt)
+    print("User question:", prompt, flush=True)
     print_retriever_results(retriever_results)
 
     retrieved_docs = "\n\n".join([str(doc.page_content) for doc in retriever_results])
@@ -84,34 +87,37 @@ def handle_user_input(prompt):
     Chat History: {chat_history}
     """
     
-    chain = get_conversational_chain()
     response = chain({"input_documents": retriever_results, "question": prompt}, return_only_outputs=True)
     return response["output_text"]
 
-# Streamlit page configuration
-st.set_page_config(page_title="Document Genie", layout="wide")
+if __name__ == "__main__":
+    embedding_model = load_embedding_model()
+    es_connection = load_elasticsearch()
+    es_store = load_elasticsearch_store(es_connection, embedding_model)
+    chain = get_conversational_chain()
+    print("All models and connections loaded", flush=True)
 
-st.markdown("""
-This chatbot is built using the Real time Retrieval-Augmented Generation (RAG) framework
-""")
+    st.markdown("""
+    This chatbot is built using the Real-time Retrieval-Augmented Generation (RAG) framework
+    """)
 
-# Initialize chat history in session state
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    # Initialize chat history in session state
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# Display chat history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # Display chat history
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-# Handle user input
-if prompt := st.chat_input("What is up?", key="first_question"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    # Handle user input
+    if prompt := st.chat_input("What is up?", key="first_question"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        # Retrieve documents and generate response
-        response = handle_user_input(prompt)
-        st.markdown(response)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"):
+            # Retrieve documents and generate response
+            response = handle_user_input(prompt, chain)
+            st.markdown(response)
+        st.session_state.messages.append({"role": "assistant", "content": response})
