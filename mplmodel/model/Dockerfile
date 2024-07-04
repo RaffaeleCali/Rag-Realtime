@@ -2,12 +2,10 @@ FROM apache/spark:3.4.2
 
 USER 0
 
-# Installare pip3 e altre dipendenze di sistema necessarie
 RUN apt-get update && apt-get install -y \
     curl \
     python3-pip
 
-# Installare le librerie Python necessarie
 RUN pip3 install numpy \
     elasticsearch \
     spark-nlp==5.3.3

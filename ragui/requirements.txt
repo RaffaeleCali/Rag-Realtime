@@ -6,4 +6,3 @@ sentence_transformers
 elasticsearch
 python-dotenv
 langchain_openai
-huggingface-cli

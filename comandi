@@ -1,0 +1,12 @@
+    "build server_data, context server_data"
+docker build -t server_data .
+
+    "build spark, context progetto_sp"
+docker build -t sparkrc -f streaming/Dockerfile .
+
+    "build streamlit, context ragstramlit"
+docker build -t streamlit_rag .
+
+    "inoltre entrare nel container ollama ed efettuare il download di gemma"
+docker exec -it ollama bash/ 
+    > ollama pull gemma:2b

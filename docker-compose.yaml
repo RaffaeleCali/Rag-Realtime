@@ -1,9 +1,11 @@
 version: '3.8'
 services:
+#|-----------------------|
+#|server per uniformare  |
+#|la struttura           |
+#|-----------------------|
   flask_server:
     image: server_data
-    build:
-      context: ./server_data
     volumes:
       - ./server_data/server.py:/server.py
       - ./server_data/dataapi:/app/data
@@ -12,6 +14,11 @@ services:
     depends_on:
       logstash:
         condition: service_started
+
+#|-----------------------|
+#|ingestion              |
+#|                       |
+#|-----------------------|
   logstash:
     image: docker.elastic.co/logstash/logstash:8.13.2
     volumes:
@@ -27,6 +34,10 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
+#|-----------------------|
+#|    kafka              |
+#|                       |
+#|-----------------------|
   broker:
     image: confluentinc/cp-kafka:latest
     container_name: broker
@@ -40,7 +51,10 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-
+#|-----------------------|
+#| Creazione topic       |
+#|                       |
+#|-----------------------|
   topics:
     image: apache/kafka:latest
     command: > 
@@ -50,17 +64,19 @@ services:
     depends_on:
       - broker
 
+#|-----------------------|
+#|    Calcolo            |
+#|   con spark           |
+#|-----------------------|
+
   spark:
-    build:
-      context: .  # Imposta il contesto di costruzione al livello superiore
-      dockerfile: streaming/Dockerfile
+    image: sparkrc
     hostname: spark
     container_name: spark
     ports:
       - 5404:5404
     volumes:
-      - ./data_volume:/home/spark/data_volume
-      - ./tmp:/tmp  # Monta ./tmp per mantenere la cache delle dipendenze di Ivy
+      - ./tmp:/tmp  
       - ./streaming/code/streaming.py:/home/spark/streaming.py
     command: > 
       /opt/spark/bin/spark-submit --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.2,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.4,com.johnsnowlabs.nlp:spark-nlp_2.12:5.3.3  /home/spark/streaming.py
@@ -68,24 +84,30 @@ services:
       topics:
         condition: service_completed_successfully
 
- 
+
+#|-----------------------|
+#|container per hostare  |
+#|e utilizzare LLM       |
+#|-----------------------|
   ollama:
-    build:
-      context: .  # Imposta il contesto di costruzione al livello superiore
-      dockerfile: ollamaprova/Dockerfile
+    container_name: ollama
+    image: ollama/ollama:latest
     ports:
       - 7689:11434
     volumes:
-      - .:/code
       - ./ollama/ollama:/root/.ollama
-      - data_volume:/datap
-    container_name: ollama
     pull_policy: always
     tty: true
     restart: always
     environment:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_HOST=0.0.0.0
+
+
+#|-----------------------|
+#|  Database             |
+#|                       |
+#|-----------------------|
   elasticsearch:   
     container_name: elasticsearch 
     image: elasticsearch:8.13.4
@@ -106,7 +128,10 @@ services:
     depends_on:
       - topics
         
-
+#|-----------------------|
+#|Visualizzazione        |
+#|       dati            |
+#|-----------------------|
   
   
   kibana:
@@ -119,25 +144,29 @@ services:
     depends_on:
       elasticsearch:
         condition: service_started
-  
 
-
-
-  ollama_interface:
-    build:
-      context: .  # Imposta il contesto di costruzione al livello superiore
-      dockerfile: ragui/Dockerfile
+#|------------------------|
+#|servizio che implementa |
+#|  Rag con streamlit     |
+#|------------------------|
+   
+  rag:
+    container_name: rag_streamlit
+    image: streamlit_rag
     ports:
       - "8501:8501"
     depends_on:
       - elasticsearch
       - ollama
-    environment:
-      - ES_HOST=http://elasticsearch:9200
-      - ES_INDEX=tes
     volumes:
       - ./ragui/code/Rag.py:/app/Rag.py
 
+#|------------------------|
+#| codice per creare      |
+#|un index es con il tipo |
+#|  dense vector          |
+#|------------------------|
+  
   elasticsearch-init:
     image: curlimages/curl:latest
     container_name: elasticsearch-init
@@ -147,13 +176,11 @@ services:
     depends_on:
       - elasticsearch
     restart: "on-failure"
+
+
+
+
 volumes:
-  data_volume:
-#    driver: local
-#    driver_opts:
-#      type: 'bind'
-#      o: 'bind'
-#      device: '/home/raffaelecali/Documenti/magistrale/tap/progetto_sp/data/'
   spark-logs:
 
   

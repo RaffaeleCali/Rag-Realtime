@@ -16,24 +16,22 @@ ARTICLES_PER_REQUEST = 10
 DATA_DIR = '/app/data'
 
 
-# Path dei file
 ARTICLES_FILE = os.path.join(DATA_DIR, 'articles.pkl')
 INDEX_FILE = os.path.join(DATA_DIR, 'index.txt')
 LAST_FETCH_DATE_FILE = os.path.join(DATA_DIR, 'last_fetch_date.txt')
 
-# Initialize the DataFrame to store articles
+
 if os.path.exists(ARTICLES_FILE) and os.path.getsize(ARTICLES_FILE) > 0:
     print("sto leggendo dal dataset gia creato")
     articles_df = pd.read_pickle(ARTICLES_FILE)
 else:
     articles_df = pd.DataFrame(columns=["url", "publishedAt", "description", "source", "title", "urlToImage", "content", "author"])
     print("creo il dataset")
-# Initialize the index to serve articles
+
 if os.path.exists(INDEX_FILE) and os.path.getsize(INDEX_FILE) > 0:
     with open(INDEX_FILE, 'r') as f:
         current_index = int(f.read())
 else:
-    print("porco paletta")
     current_index = 0
 
 def save_index():
@@ -43,23 +41,28 @@ def save_index():
 
 #fino a drug discovery processes
 #  "quantum computing", "machine learning", "neural networks", "artificial intelligence",
-#    "blockchain", "cybersecurity", "biotechnology", 
-search_terms = [ "nanotechnology","genomics", "space exploration",
-    "Quantum cryptography", "Neural network architectures", "Deep learning optimization",
-    "Generative adversarial networks", "Reinforcement learning applications", "Graph neural networks",
-    "Autonomous robotics", "Natural language processing", "Computer vision techniques", "Bioinformatics algorithms",
-    "Climate modeling", "Particle physics experiments", "Quantum field theory", "Black hole thermodynamics",
-    "Cosmological inflation", "Dark matter detection", "Renewable energy technologies", "Nanoscale materials",
-    "Organic electronic devices", "Drug discovery processes", "Genome editing technologies", "Cancer genomics",
-    "Advanced statistical methods", "Financial econometrics", "Cryptocurrency systems",
-    "Blockchain scalability solutions", "Internet of Things security", "Quantum computing algorithms",
-    "Machine learning in healthcare", "Artificial intelligence ethics",
-    "macroeconomics", "microeconomics", "behavioral economics", "financial markets", "monetary policy",
-    "economic growth", "international trade", "development economics", "public finance", "labor economics",
-    "econometrics", "sustainable development", "health economics", "agricultural economics",
-    "environmental economics", "urban economics", "game theory", "industrial organization",
-    "income inequality", "fiscal policy", "clinical trials", "epidemiology", "genetic disorders",
-    "oncology", "cardiology", "neurology", "pediatrics", "geriatrics", "immunology", "infectious diseases",
+#    "blockchain", "cybersecurity", "biotechnology", "nanotechnology","genomics", "space exploration",
+ #   "Quantum cryptography", "Neural network architectures", "Deep learning optimization",
+ #   "Generative adversarial networks", "Reinforcement learning applications",
+ 
+ # "Graph neural networks",
+ #   "Autonomous robotics", "Natural language processing", "Computer vision techniques", "Bioinformatics algorithms",
+ #   "Climate modeling", "Particle physics experiments", "Quantum field theory", "Black hole thermodynamics",
+ #   "Cosmological inflation", "Dark matter detection", "Renewable energy technologies", "Nanoscale materials",
+ #   "Organic electronic devices", "Drug discovery processes", "Genome editing technologies", "Cancer genomics",
+ #   "Advanced statistical methods", "Financial econometrics", "Cryptocurrency systems",
+ #   "Blockchain scalability solutions", "Internet of Things security", "Quantum computing algorithms",
+ #   "Machine learning in healthcare", "Artificial intelligence ethics",
+ #   "macroeconomics", "microeconomics", "behavioral economics", "financial markets", "monetary policy","economic growth", "international trade",
+#  "development economics", "public finance", "labor economics",
+#    "econometrics", "sustainable development", "health economics", "agricultural economics",
+#    "environmental economics", "urban economics", "game theory", "industrial organization",
+#    "income inequality", "fiscal policy", "clinical trials",
+#  "epidemiology", "genetic disorders",
+#    "oncology", "cardiology", "neurology", "pediatrics", "geriatrics", "immunology",
+
+search_terms = [ 
+   "infectious diseases",
     "mental health", "public health", "surgical techniques", "radiology", "anesthesiology", "pharmacology",
     "orthopedics", "endocrinology", "dermatology", "obstetrics and gynecology", "sports medicine",
     "exercise physiology", "biomechanics", "athletic performance", "sports psychology", "nutrition in sports",
@@ -72,7 +75,6 @@ search_terms = [ "nanotechnology","genomics", "space exploration",
 ]
 
 
-# Indice per tenere traccia del termine di ricerca corrente
 current_search_index = 0
 def get_next_search_term():
     global current_search_index
@@ -88,7 +90,7 @@ def get_arxiv_articles():
     params = {
         'search_query': f'all:{search_term}',
         'start': 0,
-        'max_results': 30
+        'max_results': 10
     }
 
     response = requests.get(base_url, params=params)
@@ -108,7 +110,7 @@ def get_arxiv_articles():
         }
         articles.append(article)
     
-    print(f"Number of articles fetched: {len(articles)}")
+    print(f"Numero di articoli prelevati arxiv: {len(articles)}")
     return articles
 
 def get_google_news_articles():
@@ -140,7 +142,7 @@ def get_google_news_articles():
         }
         articles.append(article)
 
-    print(f"Number of articles fetched: {len(articles)}")
+    print(f"Numero di articoli prelevati gnwes: {len(articles)}")
     return articles
 
 @app.route('/')
@@ -150,11 +152,8 @@ def index():
 
 @app.route('/get_articles', methods=['GET'])
 def get_articles():
-    print("sono dentro ")
     global current_index, articles_df
     print(f"Serving articles from index: {current_index}")
-    print("qaulcoaosas ")
-    # Controlla se abbiamo raggiunto o superato la fine del dataframe
     if current_index >= len(articles_df):
         data = {
             "@timestamp": datetime.now().isoformat(),
@@ -163,16 +162,13 @@ def get_articles():
             "status": "no more articles",
             "totalResults": "0"
         }
-        print("No more articles to serve")
+        print("Non ci sono piu articoli")
         return jsonify(data)
     
-    # Calcola l'indice finale per il blocco di articoli da servire
     end_index = min(current_index + ARTICLES_PER_REQUEST, len(articles_df))
-    
-    # Recupera gli articoli dal dataframe
+
     articles = articles_df.iloc[current_index:end_index].to_dict(orient='records')
     
-    # Aggiorna l'indice corrente
     current_index = end_index
     save_index()
     
@@ -183,8 +179,6 @@ def get_articles():
         "status": "ok",
         "totalResults": str(len(articles))
     }
-    print("Returning articles data to client")
-    print(data,flush=True)
     send_to_logstash(data)
     return jsonify(data)
 
@@ -216,7 +210,7 @@ def upload():
         "totalResults": "1"
     }
     
-    print("Uploading article")
+    print("Upload manuale")
     send_to_logstash(data)
     return jsonify({"status": "success", "data": data})
 
@@ -230,7 +224,6 @@ def fetch_articles():
         "status": "ok",
         "totalResults": str(len(articles))
     }
-    #print(data)
     send_to_logstash(data)
     return jsonify(data)
 
@@ -269,8 +262,6 @@ def fetch_google_news_articles_route():
         "status": "ok",
         "message": message
     }
-    #print(data)
-    #send_to_logstash(data)
     return jsonify(data)
 
 
@@ -283,7 +274,7 @@ def send_to_logstash(data):
 
 def fetch_initial_articles():
     with app.app_context():
-        print("chiamp la funzione iniziale")
+        print("chiamo la funzione iniziale per gnews")
         fetch_google_news_articles_route()
 
 if __name__ == '__main__':

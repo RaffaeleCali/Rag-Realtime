@@ -1,30 +1,18 @@
-# Usa un'immagine base di Python con Streamlit
 FROM python:3.8-slim
 
-# Installa le dipendenze
-RUN pip install --upgrade pip
-#COPY ragui/requirements.txt .
-#RUN pip install -r requirements.txt
-RUN pip install streamlit
-RUN pip install langchain
-RUN pip install langchain_community
-RUN pip install  langchain_core
-RUN pip install sentence_transformers
-RUN pip install elasticsearch
-RUN pip install python-dotenv
-RUN pip install langchain_openai
-#RUN pip install huggingface-cli
-# Copia il codice dell'applicazione
-RUN mkdir -p /app 
-COPY ./ragui/code /app
-# Install curl
 RUN apt-get update && apt-get install -y curl
-# Imposta la directory di lavoro
+
+RUN pip install --upgrade pip
+
+COPY ./requirements.txt /requirements.txt
+RUN pip3 install -r /requirements.txt
+
+RUN mkdir -p /app 
+COPY /code /app
+
+
 WORKDIR /app
-# Make port 8501 available to the world outside this container
+
 EXPOSE 8501
 
-#RUN pip install sparknlp
-#RUN pip install huggingface-cli 
-# Comando per eseguire l'applicazione Streamlit
 CMD ["streamlit", "run", "Rag.py"]
