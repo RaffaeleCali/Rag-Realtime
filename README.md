@@ -19,8 +19,8 @@ The project is organized into multiple Docker containers that interact with each
 First, clone the project repository:
 
 ```bash
-git clone <REPOSITORY_URL>
-cd <REPOSITORY_NAME>
+git clone git@github.com:RaffaeleCali/progetto_sp.git
+cd progetto_sp
 ```
 
 ## Preliminary Steps
