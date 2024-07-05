@@ -26,6 +26,8 @@ cd progetto_sp
 ## Preliminary Steps
 
 Before starting the system, you need to build some Docker images and configure the containers. Follow these steps to set up the environment.
+### 0. Add your api key
+google news api token in server.py and huggingface token api in rag.py
 
 ### 1. Create Necessary Directories
 
@@ -73,6 +75,7 @@ docker exec -it ollama bash
 ollama pull gemma:2b
 exit
 ```
+
 ### 4. Re-train the MLP Model (if necessary)
 
 It might be necessary to re-train the MLP model. To do this, navigate to the mplmodel directory and execute the following:
@@ -120,6 +123,7 @@ docker compose down
 8. **Streamlit RAG** (`rag`): Implements the RAG chat interface.
 9. **Ollama** (`ollama`): Hosts the LLM models for the RAG chat.
 
+
 ## Using the System
 
 Access the system components via the following ports:
@@ -128,6 +132,8 @@ Access the system components via the following ports:
 - **Chat RAG with Streamlit**: `http://localhost:8501`
 - **Manual File Upload**: `http://localhost:5000`
 - **Elasticsearch**: `http://localhost:9200`
+
+
 
 ## Conclusion
 
