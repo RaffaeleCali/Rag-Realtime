@@ -90,7 +90,8 @@ Run the command:
 If you have re-trained the MLP model, you need to rebuild the Spark image:
 ```bash
 docker build -t sparkrc -f streaming/Dockerfile .
-``
+```
+
 ### 5 . Start the System
 
 Once the preliminary steps are complete, start the system using Docker Compose.
