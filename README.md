@@ -56,7 +56,7 @@ cd ..
 Enter the `ollama` container and download the `gemma:2b` model.
 
 ```bash
-docker-compose up -d ollama
+docker compose up -d ollama
 ```
 ```bash
 docker exec -it ollama bash
@@ -69,7 +69,7 @@ exit
 Once the preliminary steps are complete, start the system using Docker Compose.
 
 ```bash
-docker-compose up 
+docker compose up 
 ```
 
 ### 4. Stop the System
@@ -77,7 +77,7 @@ docker-compose up
 To stop the system, use the following command:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ## System Components
