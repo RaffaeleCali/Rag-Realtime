@@ -5,7 +5,7 @@
 # RAG Real Time
 
 ## Introduction
-"RAG Real Time" is a real-time data processing system designed to collect, process, classify, and visualize data from Arxiv and Google News. This project leverages advanced technologies such as Docker, Kafka, Spark, Elasticsearch, and Kibana to build a robust and scalable system. Additionally, it enables the real-time updating of a vector database, which can be utilized via LongChain to support language models.
+"RAG Real Time" is a real-time data processing system designed to collect, process, classify, and visualize data from Arxiv and Google News. This project leverages advanced technologies such as Docker, Kafka, Spark, Elasticsearch, and Kibana to build a robust and scalable system. Additionally, it enables the real-time updating of a vector database, which can be utilized via LangChain to support language models.
 
 ## Project Structure
 The project is organized into multiple Docker containers that interact with each other to implement the data flow. Below are the main components and the preliminary steps needed to set up the system.
