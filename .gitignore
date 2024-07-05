@@ -3,9 +3,11 @@
 
 /tmp
 
-/mplmodel/tmp/*
+/ollamaprova
+
 !/mlpmodel/tmp/string_indexer_model/
 !/mlpmodel/tmp/mod_mlp/
+/mplmodel/tmp/*
 
 /mplmodel/data_elastic
-READMEit.mod_mlp
+READMEit.md
