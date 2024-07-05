@@ -78,14 +78,14 @@ exit
 It might be necessary to re-train the MLP model. To do this, navigate to the mplmodel directory and execute the following:
 
     Ensure there is a tmp folder with appropriate permissions at the same level as the Docker Compose file.
-    ```bash
+```bash
     cd mplmodel  
     mkdir -p tmp   
-    ```
+```
     Run the command:
-    ```bash
+```bash
     docker compose up 
-    ```
+```
 
 ### 5 . Start the System
 
