@@ -27,7 +27,17 @@ cd progetto_sp
 
 Before starting the system, you need to build some Docker images and configure the containers. Follow these steps to set up the environment.
 
-### 1. Build Docker Images
+### 1. Create Necessary Directories
+
+You need to create the following directories:
+
+```bash
+mkdir -p ollama/ollama
+mkdir -p data_elastic
+```
+check read and write permissions
+
+### 2. Build Docker Images
 
 #### Python Server (`server_data`)
 
@@ -51,7 +61,7 @@ docker build -t streamlit_rag .
 cd ..
 ```
 
-### 2. Download the Gemma Model in Ollama
+### 3. Download the Gemma Model in Ollama
 
 Enter the `ollama` container and download the `gemma:2b` model.
 
@@ -64,7 +74,7 @@ ollama pull gemma:2b
 exit
 ```
 
-### 3. Start the System
+### 4 . Start the System
 
 Once the preliminary steps are complete, start the system using Docker Compose.
 
@@ -72,7 +82,7 @@ Once the preliminary steps are complete, start the system using Docker Compose.
 docker compose up 
 ```
 
-### 4. Stop the System
+### 5. Stop the System
 
 To stop the system, use the following command:
 
