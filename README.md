@@ -73,8 +73,21 @@ docker exec -it ollama bash
 ollama pull gemma:2b
 exit
 ```
+### 4. Re-train the MLP Model (if necessary)
 
-### 4 . Start the System
+It might be necessary to re-train the MLP model. To do this, navigate to the mplmodel directory and execute the following:
+
+    Ensure there is a tmp folder with appropriate permissions at the same level as the Docker Compose file.
+    ```bash
+    cd mplmodel  
+    mkdir -p tmp   
+    ```
+    Run the command:
+    ```bash
+    docker compose up 
+    ```
+
+### 5 . Start the System
 
 Once the preliminary steps are complete, start the system using Docker Compose.
 
@@ -82,7 +95,7 @@ Once the preliminary steps are complete, start the system using Docker Compose.
 docker compose up 
 ```
 
-### 5. Stop the System
+### 6. Stop the System
 
 To stop the system, use the following command:
 
