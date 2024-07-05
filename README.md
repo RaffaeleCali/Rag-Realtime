@@ -84,7 +84,8 @@ Ensure there is a tmp folder with appropriate permissions at the same level as t
 ```
 Run the command:
 ```bash
-    docker compose up 
+    docker compose up
+    cd .. 
 ```
 
 ### 5 . Start the System
