@@ -117,7 +117,7 @@ def get_google_news_articles():
     url = "https://google-news13.p.rapidapi.com/latest"
     querystring = {"lr": "en-US"}
     headers = {
-        "x-rapidapi-key": "fae25dc23fmshcfb1a2f7bc61ac4p19044cjsn2e8919ff62dd", 
+        "x-rapidapi-key": "your_api_key", 
         "x-rapidapi-host": "google-news13.p.rapidapi.com"
     }
 
