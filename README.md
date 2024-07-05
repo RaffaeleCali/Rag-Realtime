@@ -48,7 +48,7 @@ cd ..
 ```
 
 #### Spark (`sparkrc`)
-
+Note: If you re-train the MLP model, refer to point 4 before building the Spark image.
 ```bash
 docker build -t sparkrc -f streaming/Dockerfile .
 ```
@@ -87,7 +87,10 @@ Run the command:
     docker compose up
     cd .. 
 ```
-
+If you have re-trained the MLP model, you need to rebuild the Spark image:
+```bash
+docker build -t sparkrc -f streaming/Dockerfile .
+``
 ### 5 . Start the System
 
 Once the preliminary steps are complete, start the system using Docker Compose.
