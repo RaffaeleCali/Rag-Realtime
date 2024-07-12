@@ -11,7 +11,7 @@ import os
 st.set_page_config(page_title="RealTime Rag", layout="wide")
 
 # Hugging Face API token (metti il tuo)
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = your_api
 print("API key set", flush=True)
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"

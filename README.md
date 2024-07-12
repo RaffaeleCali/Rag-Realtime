@@ -5,11 +5,12 @@
 # RAG Real Time
 
 ## Introduction
-"RAG Real Time" is a real-time data processing system designed to collect, process, classify, and visualize data from Arxiv and Google News. This project leverages advanced technologies such as Docker, Kafka, Spark, Elasticsearch, and Kibana to build a robust and scalable system. Additionally, it enables the real-time updating of a vector database, which can be utilized via LongChain to support language models.
+"RAG Real Time" is a real-time data processing system designed to collect, process, classify, and visualize data from Arxiv and Google News. This project leverages advanced technologies such as Docker, Kafka, Spark, Elasticsearch, and Kibana to build a robust and scalable system. Additionally, it enables the real-time updating of a vector database, which can be utilized via LangChain to support language models.
 
 ## Project Structure
 The project is organized into multiple Docker containers that interact with each other to implement the data flow. Below are the main components and the preliminary steps needed to set up the system.
-
+## System Architecture
+![Architecture](draw.png)
 ## Requirements
 - Docker
 - Docker Compose
@@ -19,15 +20,27 @@ The project is organized into multiple Docker containers that interact with each
 First, clone the project repository:
 
 ```bash
-git clone <REPOSITORY_URL>
-cd <REPOSITORY_NAME>
+git clone git@github.com:RaffaeleCali/progetto_sp.git
+cd progetto_sp
 ```
 
 ## Preliminary Steps
 
 Before starting the system, you need to build some Docker images and configure the containers. Follow these steps to set up the environment.
+### 0. Add your api key
+google news api token in server.py and huggingface token api in rag.py
 
-### 1. Build Docker Images
+### 1. Create Necessary Directories
+
+You need to create the following directories:
+
+```bash
+mkdir -p ollama/ollama
+mkdir -p data_elastic
+```
+check read and write permissions
+
+### 2. Build Docker Images
 
 #### Python Server (`server_data`)
 
@@ -38,7 +51,7 @@ cd ..
 ```
 
 #### Spark (`sparkrc`)
-
+Note: If you re-train the MLP model, refer to point 4 before building the Spark image.
 ```bash
 docker build -t sparkrc -f streaming/Dockerfile .
 ```
@@ -53,12 +66,12 @@ cd ..
 #### Create in progetto_sp
 ```
 
-### 2. Download the Gemma Model in Ollama
+### 3. Download the Gemma Model in Ollama
 
 Enter the `ollama` container and download the `gemma:2b` model.
 
 ```bash
-docker-compose up -d ollama
+docker compose up -d ollama
 ```
 ```bash
 docker exec -it ollama bash
@@ -66,20 +79,39 @@ ollama pull gemma:2b
 exit
 ```
 
-### 3. Start the System
+### 4. Re-train the MLP Model (if necessary)
+
+It might be necessary to re-train the MLP model. To do this, navigate to the mplmodel directory and execute the following:
+
+Ensure there is a tmp folder with appropriate permissions at the same level as the Docker Compose file.
+```bash
+    cd mplmodel  
+    mkdir -p tmp   
+```
+Run the command:
+```bash
+    docker compose up
+    cd .. 
+```
+If you have re-trained the MLP model, you need to rebuild the Spark image:
+```bash
+docker build -t sparkrc -f streaming/Dockerfile .
+```
+
+### 5 . Start the System
 
 Once the preliminary steps are complete, start the system using Docker Compose.
 
 ```bash
-docker-compose up 
+docker compose up 
 ```
 
-### 4. Stop the System
+### 6. Stop the System
 
 To stop the system, use the following command:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ## System Components
@@ -94,6 +126,7 @@ docker-compose down
 8. **Streamlit RAG** (`rag`): Implements the RAG chat interface.
 9. **Ollama** (`ollama`): Hosts the LLM models for the RAG chat.
 
+
 ## Using the System
 
 Access the system components via the following ports:
@@ -102,6 +135,8 @@ Access the system components via the following ports:
 - **Chat RAG with Streamlit**: `http://localhost:8501`
 - **Manual File Upload**: `http://localhost:5000`
 - **Elasticsearch**: `http://localhost:9200`
+
+
 
 ## Conclusion
 
