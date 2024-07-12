@@ -15,11 +15,9 @@ LOGSTASH_PORT = 5044
 ARTICLES_PER_REQUEST = 10
 DATA_DIR = '/app/data'
 
-
 ARTICLES_FILE = os.path.join(DATA_DIR, 'articles.pkl')
 INDEX_FILE = os.path.join(DATA_DIR, 'index.txt')
 LAST_FETCH_DATE_FILE = os.path.join(DATA_DIR, 'last_fetch_date.txt')
-
 
 if os.path.exists(ARTICLES_FILE) and os.path.getsize(ARTICLES_FILE) > 0:
     print("sto leggendo dal dataset gia creato")
@@ -37,7 +35,6 @@ else:
 def save_index():
     with open(INDEX_FILE, 'w') as f:
         f.write(str(current_index))
-
 
 #fino a drug discovery processes
 #  "quantum computing", "machine learning", "neural networks", "artificial intelligence",
@@ -59,10 +56,10 @@ def save_index():
 #    "environmental economics", "urban economics", "game theory", "industrial organization",
 #    "income inequality", "fiscal policy", "clinical trials",
 #  "epidemiology", "genetic disorders",
-#    "oncology", "cardiology", "neurology", "pediatrics", "geriatrics", "immunology",
+#    "oncology", "cardiology", "neurology", "pediatrics", "geriatrics", "immunology", "infectious diseases",
 
 search_terms = [ 
-   "infectious diseases",
+  
     "mental health", "public health", "surgical techniques", "radiology", "anesthesiology", "pharmacology",
     "orthopedics", "endocrinology", "dermatology", "obstetrics and gynecology", "sports medicine",
     "exercise physiology", "biomechanics", "athletic performance", "sports psychology", "nutrition in sports",
@@ -73,8 +70,6 @@ search_terms = [
     "digital health", "financial technology (FinTech)", "health informatics", "wearable technology in sports",
     "robotics in surgery"
 ]
-
-
 current_search_index = 0
 def get_next_search_term():
     global current_search_index
@@ -113,11 +108,11 @@ def get_arxiv_articles():
     print(f"Numero di articoli prelevati arxiv: {len(articles)}")
     return articles
 
-def get_google_news_articles():
+def fetch_google_news():
     url = "https://google-news13.p.rapidapi.com/latest"
     querystring = {"lr": "en-US"}
     headers = {
-        "x-rapidapi-key": "fae25dc23fmshcfb1a2f7bc61ac4p19044cjsn2e8919ff62dd", 
+        "x-rapidapi-key": "33ec592d26msh446960f3f37113ep1bfcdbjsn27ba6013e78d", 
         "x-rapidapi-host": "google-news13.p.rapidapi.com"
     }
 
@@ -148,7 +143,6 @@ def get_google_news_articles():
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @app.route('/get_articles', methods=['GET'])
 def get_articles():
@@ -182,8 +176,6 @@ def get_articles():
     send_to_logstash(data)
     return jsonify(data)
 
-
-
 @app.route('/upload', methods=['POST'])
 def upload():
     title = request.form['title']
@@ -215,7 +207,7 @@ def upload():
     return jsonify({"status": "success", "data": data})
 
 @app.route('/fetch_articles', methods=['GET'])
-def fetch_articles():
+def fetch_articles_route():
     articles = get_arxiv_articles()
     data = {
         "@timestamp": datetime.now().isoformat(),
@@ -241,15 +233,17 @@ def fetch_google_news_articles_route():
 
     if last_fetch_date != today:
         with open(LAST_FETCH_DATE_FILE, 'w') as file:
-            file.write('0')
-        with open(ARTICLES_FILE, 'wb') as file:
-            pickle.dump({}, file)
+            file.write(today)
+        
         print("Fetching new articles from Google News API")
-        articles = get_google_news_articles()
-        articles_df = pd.concat([articles_df, pd.DataFrame(articles)], ignore_index=True)
+        articles = fetch_google_news()
+        if not articles_df.empty:
+            articles_df = pd.concat([articles_df, pd.DataFrame(articles)], ignore_index=True)
+        else:
+            articles_df = pd.DataFrame(articles)
+        
         articles_df.to_pickle(ARTICLES_FILE)
-        with open(LAST_FETCH_DATE_FILE, 'w') as f:
-            f.write(today)
+        
         message = "Fetched new articles."
     else:
         print("Articles already fetched today")
@@ -264,7 +258,6 @@ def fetch_google_news_articles_route():
     }
     return jsonify(data)
 
-
 def send_to_logstash(data):
     message = json.dumps(data) + '\n'
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -274,10 +267,9 @@ def send_to_logstash(data):
 
 def fetch_initial_articles():
     with app.app_context():
-        print("chiamo la funzione iniziale per gnews")
+        print("Chiamo la funzione iniziale per Google News")
         fetch_google_news_articles_route()
 
 if __name__ == '__main__':
     fetch_initial_articles()
-    count_req = 0
     app.run(host='0.0.0.0', port=5000)
