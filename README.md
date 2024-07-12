@@ -50,6 +50,8 @@ cd ragstramlit
 docker build -t streamlit_rag .
 cd ..
 ```
+#### Create in progetto_sp
+```
 
 ### 2. Download the Gemma Model in Ollama
 
