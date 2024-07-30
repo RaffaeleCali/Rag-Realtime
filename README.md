@@ -59,7 +59,7 @@ docker build -t sparkrc -f streaming/Dockerfile .
 #### Streamlit RAG (`streamlit_rag`)
 
 ```bash
-cd ragstramlit
+cd ragui
 docker build -t streamlit_rag .
 cd ..
 ```
